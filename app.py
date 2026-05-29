@@ -178,12 +178,25 @@ class _PGConn:
 
 def get_db():
     if DATABASE_URL:
-        import psycopg2, psycopg2.extras, re
+        import re, urllib.parse
         url = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
-        # Verwijder parameters die psycopg2 niet ondersteunt
         url = re.sub(r'[&?]channel_binding=[^&]+', '', url)
-        raw = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
-        return _PGConn(raw)
+        try:
+            import psycopg2, psycopg2.extras
+            raw = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
+            return _PGConn(raw)
+        except Exception:
+            # Fallback: pg8000 (pure Python, werkt altijd op Vercel)
+            import pg8000.dbapi
+            p = urllib.parse.urlparse(url)
+            raw = pg8000.dbapi.connect(
+                host=p.hostname, port=p.port or 5432,
+                database=p.path.lstrip('/'),
+                user=p.username, password=p.password,
+                ssl_context=True
+            )
+            raw.row_factory = pg8000.dbapi.DictRow
+            return _PGConn(raw)
     raw = sqlite3.connect(DB_PATH)
     raw.row_factory = sqlite3.Row
     raw.execute('PRAGMA foreign_keys = ON')
@@ -380,6 +393,18 @@ def cluster_profielen(profielen_rows):
 
 
 # ── Auth routes ────────────────────────────────────────────────────────────────
+
+@app.route('/healthz')
+def healthz():
+    """Diagnosepagina — verwijder na productie."""
+    try:
+        conn = get_db()
+        n = conn.scalar('SELECT COUNT(*) FROM gebruikers')
+        conn.close()
+        return f'OK — database bereikbaar, {n} gebruiker(s)'
+    except Exception as e:
+        return f'FOUT: {e}', 500
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
