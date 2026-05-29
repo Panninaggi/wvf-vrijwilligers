@@ -394,6 +394,12 @@ def cluster_profielen(profielen_rows):
 
 # ── Auth routes ────────────────────────────────────────────────────────────────
 
+@app.errorhandler(500)
+def fout500(e):
+    import traceback
+    return f'<pre style="font-size:13px">{traceback.format_exc()}</pre>', 500
+
+
 @app.route('/healthz')
 def healthz():
     """Diagnosepagina — verwijder na productie."""
