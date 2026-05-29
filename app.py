@@ -766,7 +766,7 @@ def eigenaren():
     prefill_id = request.args.get('prefill','').strip()
     conn = get_db()
     eigenaren_list = conn.execute(
-        'SELECT e.*, g.voornaam||" "||g.achternaam AS gebruiker_naam FROM eigenaren e LEFT JOIN gebruikers g ON e.gebruiker_id = g.id ORDER BY e.achternaam, e.voornaam'
+        "SELECT e.*, g.voornaam||' '||g.achternaam AS gebruiker_naam FROM eigenaren e LEFT JOIN gebruikers g ON e.gebruiker_id = g.id ORDER BY e.achternaam, e.voornaam"
     ).fetchall()
     zoekresultaten = []
     if zoek:
