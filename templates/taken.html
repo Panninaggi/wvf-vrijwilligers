@@ -51,7 +51,7 @@
           <div style="font-size:.85rem;font-weight:500;color:#334155">{{ t.eigenaar_naam }}</div>
           {% else %}<span style="color:#94a3b8;font-size:.8rem">Geen eigenaar</span>{% endif %}
         </td>
-        <td><div class="vsub">{{ t.aangemaakt[:10] }}</div></td>
+        <td><div class="vsub">{{ t.aangemaakt | datum }}</div></td>
         <td><span class="status-taak {{ t.status }}">{{ t.status }}</span></td>
         <td>
           {% if t.intake_id %}

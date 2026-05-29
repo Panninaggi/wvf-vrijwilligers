@@ -132,7 +132,7 @@
     </div>
     <div>
       <div class="lbl">Aangemeld op</div>
-      <div class="val">{{ taak.aangemaakt[:10] }}</div>
+      <div class="val">{{ taak.aangemaakt | datum }}</div>
     </div>
     {% if taak.vw_email %}
     <div>

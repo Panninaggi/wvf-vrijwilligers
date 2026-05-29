@@ -374,6 +374,16 @@ def genereer_qr_base64(url):
 
 # ── Template filters ───────────────────────────────────────────────────────────
 
+@app.template_filter('datum')
+def datum_filter(waarde):
+    """Werkt met zowel SQLite strings als PostgreSQL datetime objecten."""
+    if waarde is None:
+        return ''
+    if hasattr(waarde, 'strftime'):
+        return waarde.strftime('%d-%m-%Y')
+    return str(waarde)[:10]
+
+
 @app.template_filter('display_naam')
 def display_naam_filter(v):
     if v['voornaam']:
