@@ -40,77 +40,158 @@ PROFIEL_CLUSTERS = [
 ALLE_ROLLEN = ['beheerder', 'roleigenaar', 'vrijwilliger']
 
 
-# ── Database helpers ───────────────────────────────────────────────────────────
+# ── Database laag ─────────────────────────────────────────────────────────────
+# Ondersteunt SQLite (lokaal) én PostgreSQL (Vercel/Neon) via dezelfde API.
+
+DATABASE_URL = os.environ.get('DATABASE_URL', '')
+
+_SCHEMA = '''
+    CREATE TABLE IF NOT EXISTS vrijwilligers (
+        id {auto}, naam TEXT, adres TEXT, email TEXT, telefoonnummer TEXT,
+        profielen TEXT, aangemaakt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS eigenaren (
+        id {auto}, voornaam TEXT NOT NULL, achternaam TEXT NOT NULL,
+        email TEXT, telefoonnummer TEXT, aangemaakt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS profielen (
+        id {auto}, naam TEXT NOT NULL UNIQUE,
+        eigenaar_id INTEGER REFERENCES eigenaren(id) ON DELETE SET NULL,
+        aangemaakt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS gebruikers (
+        id {auto}, voornaam TEXT NOT NULL, achternaam TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE, wachtwoord TEXT NOT NULL,
+        actief INTEGER NOT NULL DEFAULT 1, aangemaakt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS gebruiker_rollen (
+        gebruiker_id INTEGER NOT NULL REFERENCES gebruikers(id) ON DELETE CASCADE,
+        rol TEXT NOT NULL, PRIMARY KEY (gebruiker_id, rol)
+    );
+    CREATE TABLE IF NOT EXISTS taken (
+        id {auto},
+        vrijwilliger_id INTEGER REFERENCES vrijwilligers(id) ON DELETE CASCADE,
+        eigenaar_id INTEGER REFERENCES eigenaren(id) ON DELETE SET NULL,
+        profiel TEXT, type TEXT NOT NULL DEFAULT 'intake',
+        status TEXT NOT NULL DEFAULT 'Nieuw', opmerkingen TEXT,
+        aangemaakt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, bijgewerkt TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS intakes (
+        id {auto}, taak_id INTEGER UNIQUE REFERENCES taken(id) ON DELETE CASCADE,
+        vrijwilliger_id INTEGER REFERENCES vrijwilligers(id) ON DELETE CASCADE,
+        formulier_data TEXT, status TEXT NOT NULL DEFAULT 'Concept',
+        ingevuld TIMESTAMP DEFAULT CURRENT_TIMESTAMP, bijgewerkt TIMESTAMP
+    );
+'''
+
+
+class _SQLiteConn:
+    """SQLite-verbinding met dezelfde API als _PGConn."""
+
+    def __init__(self, c):
+        self._c = c
+
+    def execute(self, sql, params=()):
+        return self._c.execute(sql, params)
+
+    def executemany(self, sql, params):
+        return self._c.executemany(sql, params)
+
+    def insert(self, sql, params=()):
+        """INSERT en geeft het nieuwe id terug."""
+        return self._c.execute(sql, params).lastrowid
+
+    def col_exists(self, table, col):
+        return col in [r[1] for r in self._c.execute(f'PRAGMA table_info({table})').fetchall()]
+
+    def add_col(self, table, col, typ):
+        if not self.col_exists(table, col):
+            self._c.execute(f'ALTER TABLE {table} ADD COLUMN {col} {typ}')
+
+    def scalar(self, sql, params=()):
+        """Eerste kolom van eerste rij (voor COUNT queries)."""
+        row = self._c.execute(sql, params).fetchone()
+        return row[0] if row else 0
+
+    def create_schema(self):
+        self._c.executescript(_SCHEMA.format(auto='INTEGER PRIMARY KEY AUTOINCREMENT'))
+
+    def commit(self):   self._c.commit()
+    def close(self):    self._c.close()
+    def rollback(self): pass
+
+
+class _PGConn:
+    """PostgreSQL-verbinding (psycopg2) met dezelfde API als _SQLiteConn."""
+
+    def __init__(self, c):
+        self._c = c
+
+    def _fix(self, sql):
+        return sql.replace('?', '%s')
+
+    def execute(self, sql, params=()):
+        cur = self._c.cursor()
+        cur.execute(self._fix(sql), params or None)
+        return cur
+
+    def executemany(self, sql, params):
+        import psycopg2.extras
+        cur = self._c.cursor()
+        psycopg2.extras.execute_batch(cur, self._fix(sql), params)
+        return cur
+
+    def insert(self, sql, params=()):
+        cur = self._c.cursor()
+        cur.execute(self._fix(sql) + ' RETURNING id', params or None)
+        return cur.fetchone()['id']
+
+    def col_exists(self, table, col):
+        cur = self._c.cursor()
+        cur.execute(
+            "SELECT 1 FROM information_schema.columns WHERE table_name=%s AND column_name=%s",
+            (table, col)
+        )
+        return bool(cur.fetchone())
+
+    def add_col(self, table, col, typ):
+        if not self.col_exists(table, col):
+            self.execute(f'ALTER TABLE {table} ADD COLUMN {col} {typ}')
+
+    def scalar(self, sql, params=()):
+        cur = self._c.cursor()
+        cur.execute(self._fix(sql), params or None)
+        row = cur.fetchone()
+        return list(row.values())[0] if row else 0
+
+    def create_schema(self):
+        cur = self._c.cursor()
+        for stmt in _SCHEMA.format(auto='SERIAL PRIMARY KEY').strip().split(';'):
+            stmt = stmt.strip()
+            if stmt:
+                cur.execute(stmt)
+
+    def commit(self):   self._c.commit()
+    def close(self):    self._c.close()
+    def rollback(self): self._c.rollback()
+
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute('PRAGMA foreign_keys = ON')
-    return conn
-
-
-def _add_col(conn, table, col, coltype):
-    existing = [r[1] for r in conn.execute(f'PRAGMA table_info({table})').fetchall()]
-    if col not in existing:
-        conn.execute(f'ALTER TABLE {table} ADD COLUMN {col} {coltype}')
+    if DATABASE_URL:
+        import psycopg2, psycopg2.extras
+        url = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+        raw = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
+        return _PGConn(raw)
+    raw = sqlite3.connect(DB_PATH)
+    raw.row_factory = sqlite3.Row
+    raw.execute('PRAGMA foreign_keys = ON')
+    return _SQLiteConn(raw)
 
 
 def init_db():
     conn = get_db()
-    conn.executescript('''
-        CREATE TABLE IF NOT EXISTS vrijwilligers (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            naam TEXT, adres TEXT, email TEXT, telefoonnummer TEXT,
-            profielen TEXT, aangemaakt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE TABLE IF NOT EXISTS eigenaren (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            voornaam TEXT NOT NULL, achternaam TEXT NOT NULL,
-            email TEXT, telefoonnummer TEXT,
-            aangemaakt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE TABLE IF NOT EXISTS profielen (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            naam TEXT NOT NULL UNIQUE,
-            eigenaar_id INTEGER REFERENCES eigenaren(id) ON DELETE SET NULL,
-            aangemaakt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE TABLE IF NOT EXISTS gebruikers (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            voornaam TEXT NOT NULL, achternaam TEXT NOT NULL,
-            email TEXT NOT NULL UNIQUE,
-            wachtwoord TEXT NOT NULL,
-            actief INTEGER NOT NULL DEFAULT 1,
-            aangemaakt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE TABLE IF NOT EXISTS gebruiker_rollen (
-            gebruiker_id INTEGER NOT NULL REFERENCES gebruikers(id) ON DELETE CASCADE,
-            rol TEXT NOT NULL,
-            PRIMARY KEY (gebruiker_id, rol)
-        );
-        CREATE TABLE IF NOT EXISTS taken (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            vrijwilliger_id INTEGER REFERENCES vrijwilligers(id) ON DELETE CASCADE,
-            eigenaar_id INTEGER REFERENCES eigenaren(id) ON DELETE SET NULL,
-            profiel TEXT,
-            type TEXT NOT NULL DEFAULT 'intake',
-            status TEXT NOT NULL DEFAULT 'Nieuw',
-            opmerkingen TEXT,
-            aangemaakt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            bijgewerkt TIMESTAMP
-        );
-        CREATE TABLE IF NOT EXISTS intakes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            taak_id INTEGER UNIQUE REFERENCES taken(id) ON DELETE CASCADE,
-            vrijwilliger_id INTEGER REFERENCES vrijwilligers(id) ON DELETE CASCADE,
-            formulier_data TEXT,
-            status TEXT NOT NULL DEFAULT 'Concept',
-            ingevuld TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            bijgewerkt TIMESTAMP
-        );
-    ''')
+    conn.create_schema()
 
-    # Vrijwilligers: nieuwe kolommen
     for col, typ in [
         ('voornaam','TEXT'),('tussenvoegsel','TEXT'),('achternaam','TEXT'),
         ('postcode','TEXT'),('woonplaats','TEXT'),('geboortedatum','TEXT'),
@@ -119,26 +200,26 @@ def init_db():
         ('sponsor_interesse','TEXT'),('vriend_wvf','TEXT'),('avg_toestemming','TEXT'),
         ('opmerkingen','TEXT'),('status_vrijwilliger','TEXT'),
     ]:
-        _add_col(conn, 'vrijwilligers', col, typ)
+        conn.add_col('vrijwilligers', col, typ)
 
     for col, typ in [('tussenvoegsel','TEXT'),('gebruiker_id','INTEGER')]:
-        _add_col(conn, 'eigenaren', col, typ)
+        conn.add_col('eigenaren', col, typ)
 
-    for col, typ in [
-        ('vog_nodig','TEXT'), ('gedragscode_vereist','TEXT'), ('avg_akkoord_vereist','TEXT')
-    ]:
-        _add_col(conn, 'profielen', col, typ)
+    for col, typ in [('vog_nodig','TEXT'),('gedragscode_vereist','TEXT'),('avg_akkoord_vereist','TEXT')]:
+        conn.add_col('profielen', col, typ)
 
-    if conn.execute('SELECT COUNT(*) FROM profielen').fetchone()[0] == 0:
-        conn.executemany('INSERT INTO profielen (naam) VALUES (?)', [(p,) for p in PROFIELEN_SEED])
+    if conn.scalar('SELECT COUNT(*) FROM profielen') == 0:
+        conn.executemany(
+            'INSERT INTO profielen (naam) VALUES (?) ON CONFLICT (naam) DO NOTHING',
+            [(p,) for p in PROFIELEN_SEED]
+        )
 
-    # Eerste beheerder aanmaken als er nog geen gebruikers zijn
-    if conn.execute('SELECT COUNT(*) FROM gebruikers').fetchone()[0] == 0:
+    if conn.scalar('SELECT COUNT(*) FROM gebruikers') == 0:
         ww = secrets.token_urlsafe(10)
-        uid = conn.execute(
+        uid = conn.insert(
             'INSERT INTO gebruikers (voornaam, achternaam, email, wachtwoord) VALUES (?,?,?,?)',
             ('Admin', 'WVF', 'admin@wvf.nl', generate_password_hash(ww))
-        ).lastrowid
+        )
         conn.execute('INSERT INTO gebruiker_rollen (gebruiker_id, rol) VALUES (?,?)', (uid, 'beheerder'))
         print(f'\n  ┌─────────────────────────────────────────────┐')
         print(f'  │  Eerste beheerder aangemaakt               │')
@@ -350,7 +431,7 @@ def registreren_post():
     geselecteerde_profielen = request.form.getlist('profielen')
 
     conn = get_db()
-    cur = conn.execute('''
+    vw_id = conn.insert('''
         INSERT INTO vrijwilligers
         (naam, voornaam, tussenvoegsel, achternaam, adres, postcode, woonplaats,
          geboortedatum, email, telefoonnummer, profielen, status_vrijwilliger)
@@ -364,7 +445,6 @@ def registreren_post():
           request.form.get('telefoonnummer','').strip(),
           '||'.join(geselecteerde_profielen),
           'Nieuw'))
-    vw_id = cur.lastrowid
 
     # Taak + email per profiel
     for profiel_naam in geselecteerde_profielen:
@@ -378,11 +458,10 @@ def registreren_post():
         ''', (profiel_naam,)).fetchone()
 
         eigenaar_id = profiel_row['eigenaar_id'] if profiel_row else None
-        taak_cur = conn.execute(
+        taak_id = conn.insert(
             'INSERT INTO taken (vrijwilliger_id, eigenaar_id, profiel, type, status) VALUES (?,?,?,?,?)',
             (vw_id, eigenaar_id, profiel_naam, 'intake', 'Nieuw')
         )
-        taak_id = taak_cur.lastrowid
 
         if profiel_row and profiel_row['eigenaar_email']:
             email_eigenaar_notificatie(
