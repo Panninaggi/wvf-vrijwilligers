@@ -274,7 +274,7 @@ def rol_vereist(*rollen):
 
 def heeft_rol(user_id, *rollen):
     conn = get_db()
-    user_rollen = {r[0] for r in conn.execute(
+    user_rollen = {r['rol'] for r in conn.execute(
         'SELECT rol FROM gebruiker_rollen WHERE gebruiker_id = ?', (user_id,)
     ).fetchall()}
     conn.close()
@@ -288,7 +288,7 @@ def inject_user():
         user = conn.execute(
             'SELECT * FROM gebruikers WHERE id = ?', (session['user_id'],)
         ).fetchone()
-        rollen = {r[0] for r in conn.execute(
+        rollen = {r['rol'] for r in conn.execute(
             'SELECT rol FROM gebruiker_rollen WHERE gebruiker_id = ?', (session['user_id'],)
         ).fetchall()}
         conn.close()
@@ -897,7 +897,7 @@ def gebruikers():
     users = conn.execute('SELECT * FROM gebruikers ORDER BY achternaam, voornaam').fetchall()
     user_rollen = {}
     for u in users:
-        user_rollen[u['id']] = [r[0] for r in conn.execute(
+        user_rollen[u['id']] = [r['rol'] for r in conn.execute(
             'SELECT rol FROM gebruiker_rollen WHERE gebruiker_id = ?', (u['id'],)
         ).fetchall()]
     eigenaren_list = conn.execute(
