@@ -178,8 +178,10 @@ class _PGConn:
 
 def get_db():
     if DATABASE_URL:
-        import psycopg2, psycopg2.extras
+        import psycopg2, psycopg2.extras, re
         url = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+        # Verwijder parameters die psycopg2 niet ondersteunt
+        url = re.sub(r'[&?]channel_binding=[^&]+', '', url)
         raw = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
         return _PGConn(raw)
     raw = sqlite3.connect(DB_PATH)
@@ -957,8 +959,13 @@ def gebruiker_verwijderen(uid):
     return redirect(url_for('gebruikers'))
 
 
-if __name__ == '__main__':
+# Initialiseer database bij opstarten (ook op Vercel)
+try:
     init_db()
+except Exception as _e:
+    print(f'[init_db] {_e}')
+
+if __name__ == '__main__':
     print('  App draait op: http://localhost:5000')
     debug = os.environ.get('FLASK_ENV') != 'production'
     app.run(debug=debug, port=int(os.environ.get('PORT', 5000)))
