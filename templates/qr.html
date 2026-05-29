@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}QR-code registratie — WVF{% endblock %}
+
+{% block content %}
+<div class="page" style="max-width:680px">
+  <div class="breadcrumb">
+    <a href="/beheer">Beheer</a>
+    <span>›</span>
+    <span>QR-code registratie</span>
+  </div>
+
+  <div class="card" style="text-align:center;padding:2.5rem">
+    <h2 style="font-size:1.2rem;font-weight:700;color:#1A6CC4;margin-bottom:.5rem">QR-code vrijwilligersaanmelding</h2>
+    <p style="font-size:.9rem;color:#64748b;margin-bottom:1.75rem">
+      Laat vrijwilligers deze QR-code scannen om het aanmeldingsformulier te openen.
+    </p>
+
+    {% if qr_data %}
+    <div style="display:inline-block;padding:1rem;background:#fff;border:2px solid #e2e8f0;border-radius:10px;margin-bottom:1.25rem">
+      <img src="data:image/png;base64,{{ qr_data }}" alt="QR-code registratie"
+           style="display:block;width:220px;height:220px">
+    </div>
+    {% else %}
+    <div style="width:220px;height:220px;background:#f8fafc;border:2px dashed #cbd5e1;border-radius:8px;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem">
+      <div style="text-align:center;color:#94a3b8;font-size:.85rem">
+        <div>Installeer qrcode</div>
+        <code style="font-size:.8rem">pip install qrcode[pil]</code>
+      </div>
+    </div>
+    {% endif %}
+
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:.75rem 1rem;display:inline-block;margin-bottom:1.5rem">
+      <span style="font-size:.8rem;color:#64748b">URL: </span>
+      <a href="{{ reg_url }}" target="_blank"
+         style="color:#1A6CC4;font-weight:600;font-size:.9rem">{{ reg_url }}</a>
+    </div>
+
+    <div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap">
+      <a href="{{ reg_url }}" target="_blank"
+         style="padding:.5rem 1.1rem;background:#1A6CC4;color:#fff;border-radius:6px;font-size:.88rem;font-weight:600;text-decoration:none">
+        Formulier testen →
+      </a>
+      {% if qr_data %}
+      <a href="data:image/png;base64,{{ qr_data }}" download="wvf-qr-registratie.png"
+         style="padding:.5rem 1.1rem;background:#f1f5f9;color:#475569;border:1.5px solid #e2e8f0;border-radius:6px;font-size:.88rem;font-weight:600;text-decoration:none">
+        QR downloaden ↓
+      </a>
+      {% endif %}
+    </div>
+
+    <p style="margin-top:1.5rem;font-size:.8rem;color:#94a3b8">
+      Tip: print de QR-code en hang hem op bij de ingang of deel de link via e-mail.
+    </p>
+  </div>
+</div>
+{% endblock %}

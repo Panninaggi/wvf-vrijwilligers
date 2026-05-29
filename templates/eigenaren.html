@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% block title %}Eigenaren — Beheer — WVF{% endblock %}
+
+{% block head %}
+<style>
+  .zoek-resultaat {
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;
+    padding: .55rem .85rem; margin-bottom: .3rem;
+    display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+    font-size: .88rem;
+  }
+  .zoek-resultaat strong { color: #1A6CC4; }
+  .zoek-resultaat .vsub { font-size: .8rem; color: #64748b; }
+  .btn-prefill {
+    font-size: .8rem; color: #1A6CC4; border: 1px solid #1A6CC4;
+    padding: .18rem .5rem; border-radius: 4px; white-space: nowrap;
+    text-decoration: none; flex-shrink: 0; transition: background .12s, color .12s;
+  }
+  .btn-prefill:hover { background: #1A6CC4; color: #fff; }
+  .prefill-notice {
+    font-size: .82rem; color: #1e40af; background: #eff6ff;
+    padding: .5rem .75rem; border-radius: 6px; margin-bottom: 1rem;
+    border-left: 3px solid #3b82f6;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+  <div class="breadcrumb">
+    <a href="/beheer">Beheer</a>
+    <span>›</span>
+    <span>Eigenaren</span>
+  </div>
+
+  <!-- Zoek vrijwilliger als basis voor eigenaar -->
+  <div class="card" style="margin-bottom:1.75rem">
+    <div class="card-title">Vrijwilliger zoeken als eigenaar</div>
+    <form method="GET" action="/beheer/eigenaren" class="search-row">
+      <input type="text" name="q" placeholder="Zoek op naam…" value="{{ zoek }}">
+      <button type="submit">Zoeken</button>
+      {% if zoek %}<a href="/beheer/eigenaren" class="reset-link">Wis</a>{% endif %}
+    </form>
+
+    {% if zoek %}
+      {% if zoekresultaten %}
+        {% for v in zoekresultaten %}
+        <div class="zoek-resultaat">
+          <div>
+            <strong>{{ v | display_naam }}</strong>
+            {% if v.woonplaats %}<span class="vsub"> — {{ v.woonplaats }}</span>{% endif %}
+            {% if v.email %}<span class="vsub"> — {{ v.email }}</span>{% endif %}
+          </div>
+          <a href="/beheer/eigenaren?prefill={{ v.id }}" class="btn-prefill">Toevoegen als eigenaar →</a>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p style="font-size:.88rem;color:#94a3b8">Geen vrijwilligers gevonden voor "{{ zoek }}".</p>
+      {% endif %}
+    {% else %}
+      <p style="font-size:.85rem;color:#94a3b8">Zoek een bestaande vrijwilliger om diens gegevens over te nemen.</p>
+    {% endif %}
+  </div>
+
+  <div class="two-col">
+
+    <!-- Formulier -->
+    <div class="card">
+      <div class="card-title">Eigenaar toevoegen</div>
+
+      {% if prefill %}
+      <div class="prefill-notice">
+        Gegevens overgenomen van: <strong>{{ prefill | display_naam }}</strong>
+      </div>
+      {% endif %}
+
+      <form method="POST" action="/beheer/eigenaren/toevoegen">
+        <div class="field">
+          <label>Voornaam <span style="color:#dc2626">*</span></label>
+          <input type="text" name="voornaam" required placeholder="Voornaam"
+                 value="{{ prefill.voornaam if prefill else '' }}" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Tussenvoegsel</label>
+          <input type="text" name="tussenvoegsel" placeholder="van"
+                 value="{{ prefill.tussenvoegsel if prefill and prefill.tussenvoegsel else '' }}" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Achternaam <span style="color:#dc2626">*</span></label>
+          <input type="text" name="achternaam" required placeholder="Achternaam"
+                 value="{{ prefill.achternaam if prefill and prefill.achternaam else '' }}" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>E-mailadres</label>
+          <input type="email" name="email" placeholder="naam@voorbeeld.nl"
+                 value="{{ prefill.email if prefill else '' }}" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Telefoonnummer</label>
+          <input type="tel" name="telefoonnummer" placeholder="06-12345678"
+                 value="{{ prefill.telefoonnummer if prefill else '' }}" autocomplete="off">
+        </div>
+        <button type="submit" class="btn-primary">Opslaan</button>
+      </form>
+    </div>
+
+    <!-- Lijst -->
+    <div class="card">
+      <div class="card-title">Geregistreerde eigenaren</div>
+      <p class="count-label">{{ eigenaren|length }} eigenaar/eigenaren</p>
+
+      {% if eigenaren %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Naam</th><th>Contact</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for e in eigenaren %}
+            <tr>
+              <td>
+                <div class="vname">
+                  {{ e.voornaam }}{% if e.tussenvoegsel %} {{ e.tussenvoegsel }}{% endif %} {{ e.achternaam }}
+                </div>
+              </td>
+              <td>
+                {% if e.email %}<div><a href="mailto:{{ e.email }}" style="color:#1A6CC4">{{ e.email }}</a></div>{% endif %}
+                {% if e.telefoonnummer %}<div class="vsub">{{ e.telefoonnummer }}</div>{% endif %}
+              </td>
+              <td>
+                <form method="POST" action="/beheer/eigenaren/verwijderen/{{ e.id }}"
+                      onsubmit="return confirm('Eigenaar verwijderen? De koppeling met profielen wordt verwijderd.')">
+                  <button type="submit" class="btn-del" title="Verwijderen">✕</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty">Nog geen eigenaren toegevoegd.</div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}

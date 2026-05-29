@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Vrijwilligersbeheer — WVF{% endblock %}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #f0f4f8; color: #1e293b; min-height: 100vh; }
+    a { color: inherit; text-decoration: none; }
+
+    /* ── Header ── */
+    header { background: #1A6CC4; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.25); position: relative; }
+    .header-inner { max-width: 1280px; margin: 0 auto; padding: .75rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .brand { display: flex; align-items: center; gap: .75rem; text-decoration: none; color: #fff; }
+    .brand-logo-wrap { width: 46px; height: 46px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+    .brand-logo { height: 40px; width: auto; display: block; }
+    .brand h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: .02em; line-height: 1.2; }
+    .brand-sub { font-size: .75rem; opacity: .65; font-weight: 400; display: block; }
+    .topnav { display: flex; gap: .2rem; align-items: center; }
+    .nav-item { padding: .4rem .75rem; border-radius: 6px; font-size: .85rem; font-weight: 500; color: rgba(255,255,255,.75); transition: background .15s, color .15s; display: flex; align-items: center; gap: .35rem; min-height: 36px; }
+    .nav-item:hover { background: rgba(255,255,255,.15); color: #fff; }
+    .nav-item.active { background: rgba(255,255,255,.2); color: #fff; }
+    .nav-user { font-size: .8rem; color: rgba(255,255,255,.5); padding: .4rem .4rem; white-space: nowrap; }
+    /* Hamburger */
+    .hamburger { display: none; background: none; border: none; cursor: pointer; padding: .5rem; color: #fff; flex-direction: column; gap: 5px; }
+    .hamburger span { display: block; width: 22px; height: 2px; background: #fff; border-radius: 2px; transition: all .25s; }
+    .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    @media (max-width: 720px) {
+      .hamburger { display: flex; }
+      .topnav { display: none; position: absolute; top: 100%; left: 0; right: 0; background: #155DAE; flex-direction: column; align-items: stretch; padding: .5rem .75rem .75rem; gap: .15rem; z-index: 500; box-shadow: 0 4px 12px rgba(0,0,0,.2); }
+      .topnav.open { display: flex; }
+      .nav-item { padding: .65rem .75rem; border-radius: 6px; }
+      .nav-user { padding: .65rem .75rem; }
+    }
+    .flash-wrap { max-width: 1280px; margin: .75rem auto 0; padding: 0 1.5rem; }
+    .flash { padding: .65rem 1rem; border-radius: 6px; font-size: .88rem; font-weight: 500; margin-bottom: .4rem; }
+    .flash.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .flash.error   { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+    .flash.warning { background: #fef9c3; color: #854d0e; border: 1px solid #fde68a; }
+    .flash.info    { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+
+    /* ── Page ── */
+    .page { max-width: 1280px; margin: 1.5rem auto; padding: 0 1.25rem; }
+    .two-col { display: grid; grid-template-columns: 380px 1fr; gap: 1.5rem; align-items: start; }
+    @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+    @media (max-width: 600px) { .page { margin: 1rem auto; padding: 0 .75rem; } .card { padding: 1.1rem; } }
+
+    /* ── Breadcrumb ── */
+    .breadcrumb { font-size: .82rem; color: #64748b; margin-bottom: 1.25rem; display: flex; align-items: center; gap: .4rem; }
+    .breadcrumb a { color: #1A6CC4; }
+    .breadcrumb a:hover { text-decoration: underline; }
+
+    /* ── Card ── */
+    .card { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.04); padding: 1.5rem; }
+    .card-title { font-size: 1rem; font-weight: 700; color: #1A6CC4; margin-bottom: 1.25rem; padding-bottom: .6rem; border-bottom: 2px solid #e2e8f0; }
+
+    /* ── Form ── */
+    .field { margin-bottom: 1rem; }
+    .field label { display: block; font-size: .76rem; font-weight: 600; color: #475569; margin-bottom: .3rem; text-transform: uppercase; letter-spacing: .04em; }
+    .field input[type=text],
+    .field input[type=email],
+    .field input[type=tel],
+    .field select { width: 100%; padding: .5rem .75rem; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: .95rem; color: #1e293b; background: #fff; transition: border-color .15s, box-shadow .15s; }
+    .field input:focus, .field select:focus { outline: none; border-color: #1A6CC4; box-shadow: 0 0 0 3px rgba(26,108,196,.12); }
+    .btn-primary { width: 100%; padding: .62rem; background: #1A6CC4; color: #fff; border: none; border-radius: 6px; font-size: .95rem; font-weight: 600; cursor: pointer; margin-top: .5rem; transition: background .15s; }
+    .btn-primary:hover { background: #155DAE; }
+
+    /* ── Table ── */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    thead th { text-align: left; padding: .55rem .75rem; background: #f8fafc; color: #1A6CC4; font-weight: 700; font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+    tbody tr { border-bottom: 1px solid #f1f5f9; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f8fafc; }
+    tbody td { padding: .6rem .75rem; vertical-align: middle; }
+    .vname { font-weight: 600; color: #1A6CC4; }
+    .vsub { font-size: .8rem; color: #64748b; margin-top: .1rem; }
+
+    /* ── Profile tags ── */
+    .profile-tags { display: flex; flex-wrap: wrap; gap: .2rem; }
+    .ptag { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; font-size: .73rem; padding: .1rem .4rem; border-radius: 4px; white-space: nowrap; }
+
+    /* ── Buttons ── */
+    .btn-del { background: none; border: 1px solid #fca5a5; color: #dc2626; border-radius: 4px; padding: .22rem .55rem; font-size: .8rem; cursor: pointer; }
+    .btn-del:hover { background: #fef2f2; }
+    .btn-save-sm { padding: .28rem .65rem; background: #1A6CC4; color: #fff; border: none; border-radius: 4px; font-size: .8rem; cursor: pointer; flex-shrink: 0; }
+    .btn-save-sm:hover { background: #155DAE; }
+
+    /* ── Inline select ── */
+    .select-inline { padding: .3rem .55rem; border: 1.5px solid #cbd5e1; border-radius: 4px; font-size: .85rem; color: #1e293b; background: #fff; }
+    .select-inline:focus { outline: none; border-color: #1A6CC4; }
+    .eigenaar-row { display: flex; align-items: center; gap: .4rem; }
+
+    /* ── Misc ── */
+    .count-label { font-size: .82rem; color: #64748b; margin-bottom: .9rem; }
+    .empty { text-align: center; padding: 3rem 1rem; color: #94a3b8; font-size: .92rem; }
+    .card-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; padding-bottom: .6rem; border-bottom: 2px solid #e2e8f0; }
+    .card-title-row .card-title { margin: 0; padding: 0; border: none; }
+    .btn-new { padding: .35rem .85rem; background: #1A6CC4; color: #fff; border-radius: 6px; font-size: .85rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: .3rem; transition: background .15s; }
+    .btn-new:hover { background: #155DAE; }
+    .status-badge { font-size: .75rem; font-weight: 600; padding: .15rem .45rem; border-radius: 4px; white-space: nowrap; }
+    .status-badge.actief { background: #dcfce7; color: #166534; }
+    .status-badge.inactief { background: #fee2e2; color: #991b1b; }
+
+    /* ── Search ── */
+    .search-row { display: flex; align-items: center; gap: .75rem; margin-bottom: 1.1rem; }
+    .search-row input { flex: 1; padding: .45rem .75rem; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: .9rem; }
+    .search-row input:focus { outline: none; border-color: #1A6CC4; }
+    .search-row button { padding: .45rem .9rem; background: #1A6CC4; color: #fff; border: none; border-radius: 6px; font-size: .88rem; cursor: pointer; }
+    .search-row .reset-link { font-size: .85rem; color: #64748b; }
+    .search-row .reset-link:hover { color: #1A6CC4; }
+
+    /* ── Multi-select ── */
+    .ms-wrap { position: relative; }
+    .ms-btn { width: 100%; padding: .5rem .75rem; border: 1.5px solid #cbd5e1; border-radius: 6px; background: #fff; font-size: .95rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: #64748b; transition: border-color .15s, box-shadow .15s; text-align: left; }
+    .ms-btn.active { border-color: #1A6CC4; box-shadow: 0 0 0 3px rgba(26,108,196,.12); border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+    .ms-btn.has-selection { color: #1e293b; }
+    .ms-chevron { transition: transform .2s; display: inline-block; font-size: .75rem; }
+    .ms-btn.active .ms-chevron { transform: rotate(180deg); }
+    .ms-dropdown { display: none; position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1.5px solid #1A6CC4; border-top: none; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; max-height: 240px; overflow-y: auto; z-index: 200; box-shadow: 0 8px 20px rgba(0,0,0,.12); }
+    .ms-dropdown.open { display: block; }
+    .ms-option { display: flex; align-items: center; gap: .6rem; padding: .45rem .75rem; cursor: pointer; font-size: .9rem; transition: background .1s; }
+    .ms-option:hover { background: #f1f5f9; }
+    .ms-option input[type=checkbox] { accent-color: #1A6CC4; width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
+    .tags { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .5rem; min-height: .5rem; }
+    .tag { background: #dbeafe; color: #1e40af; font-size: .78rem; font-weight: 500; padding: .18rem .45rem .18rem .55rem; border-radius: 4px; display: flex; align-items: center; gap: .25rem; }
+    .tag-remove { background: none; border: none; cursor: pointer; color: #1e40af; font-size: 1rem; line-height: 1; padding: 0; opacity: .7; }
+    .tag-remove:hover { opacity: 1; }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <a href="{{ '/' if huidig_user else '/login' }}" class="brand">
+      <div class="brand-logo-wrap">
+        <img src="/static/logo.png" alt="WVF logo" class="brand-logo"
+             onerror="this.parentElement.style.display='none'">
+      </div>
+      <div>
+        <h1>Vrijwilligersbeheer</h1>
+        <span class="brand-sub">Voetbalvereniging W.V.F.</span>
+      </div>
+    </a>
+    <button class="hamburger" id="hamburger" onclick="toggleNav()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <nav class="topnav" id="topnav">
+      {% if huidig_user %}
+        {% if 'beheerder' in huidig_rollen %}
+        <a href="/" class="nav-item {{ 'active' if request.path == '/' else '' }}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          Vrijwilligers
+        </a>
+        {% endif %}
+        <a href="/taken" class="nav-item {{ 'active' if request.path.startswith('/taken') or request.path.startswith('/intake') else '' }}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          Taken
+        </a>
+        {% if 'beheerder' in huidig_rollen %}
+        <a href="/beheer" class="nav-item {{ 'active' if request.path.startswith('/beheer') else '' }}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Beheer
+        </a>
+        {% endif %}
+        <span class="nav-user">{{ huidig_user.voornaam }}</span>
+        <a href="/logout" class="nav-item">Uitloggen</a>
+      {% else %}
+        <a href="/login" class="nav-item">Inloggen</a>
+      {% endif %}
+    </nav>
+  </div>
+</header>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="flash-wrap">
+    {% for cat, msg in messages %}
+    <div class="flash {{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endwith %}
+
+{% block content %}{% endblock %}
+
+{% block scripts %}{% endblock %}
+<script>
+  function toggleNav() {
+    document.getElementById('topnav').classList.toggle('open');
+    document.getElementById('hamburger').classList.toggle('open');
+  }
+  document.addEventListener('click', function(e) {
+    const nav = document.getElementById('topnav');
+    const btn = document.getElementById('hamburger');
+    if (nav && btn && !nav.contains(e.target) && !btn.contains(e.target)) {
+      nav.classList.remove('open');
+      btn.classList.remove('open');
+    }
+  });
+</script>
+</body>
+</html>

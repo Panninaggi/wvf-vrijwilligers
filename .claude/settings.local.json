@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"/Users/gerbenpannen/Documents/D-schijf/D schijf/14 WVF/01 WVF Vrijwilligersbeleid/Applicatie/templates\")",
+      "Bash(chmod +x \"/Users/gerbenpannen/Documents/D-schijf/D schijf/14 WVF/01 WVF Vrijwilligersbeleid/Applicatie/start.sh\")",
+      "Bash(lsof -ti:5000)",
+      "Bash(xargs kill -9)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5000/)",
+      "Bash(open http://127.0.0.1:5000/)"
+    ],
+    "additionalDirectories": [
+      "/Users/gerbenpannen/Documents/D-schijf/D schijf/14 WVF/01 WVF Vrijwilligersbeleid/Applicatie"
+    ]
+  }
+}

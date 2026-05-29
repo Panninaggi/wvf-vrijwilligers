@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% block title %}Vrijwilligers — WVF{% endblock %}
+
+{% block content %}
+<div class="page">
+  <div class="card">
+    <div class="card-title-row">
+      <span class="card-title">Geregistreerde vrijwilligers</span>
+      <a href="/toevoegen" class="btn-new">+ Vrijwilliger toevoegen</a>
+    </div>
+
+    <form method="GET" action="/" class="search-row">
+      <input type="text" name="q" placeholder="Zoek op naam, woonplaats, e-mail of profiel…" value="{{ zoek }}">
+      <button type="submit">Zoeken</button>
+      {% if zoek %}<a href="/" class="reset-link">Wis</a>{% endif %}
+    </form>
+
+    <p class="count-label">
+      {{ vrijwilligers|length }} vrijwilliger(s){% if zoek %} gevonden voor "{{ zoek }}"{% else %} geregistreerd{% endif %}
+    </p>
+
+    {% if vrijwilligers %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Naam</th>
+            <th>Adres</th>
+            <th>Contact</th>
+            <th>Status</th>
+            <th>Profielen</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in vrijwilligers %}
+          <tr>
+            <td>
+              <div class="vname">{{ v | display_naam }}</div>
+              {% if v.geboortedatum %}<div class="vsub">{{ v.geboortedatum }}</div>{% endif %}
+            </td>
+            <td>
+              {% if v.woonplaats or v.postcode %}
+                <div>{% if v.woonplaats %}{{ v.woonplaats }}{% endif %}</div>
+                {% if v.postcode %}<div class="vsub">{{ v.postcode }}</div>{% endif %}
+              {% endif %}
+            </td>
+            <td>
+              {% if v.email %}<div><a href="mailto:{{ v.email }}" style="color:#1A6CC4">{{ v.email }}</a></div>{% endif %}
+              {% if v.telefoonnummer %}<div class="vsub">{{ v.telefoonnummer }}</div>{% endif %}
+            </td>
+            <td>
+              {% if v.status_vrijwilliger %}
+              <span class="status-badge {{ v.status_vrijwilliger | lower }}">{{ v.status_vrijwilliger }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="profile-tags">
+                {% if v.profielen %}
+                  {% for tag in v.profielen.split('||') %}
+                    {% if tag %}<span class="ptag">{{ tag }}</span>{% endif %}
+                  {% endfor %}
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              <form method="POST" action="/verwijderen/{{ v.id }}"
+                    onsubmit="return confirm('Vrijwilliger verwijderen?')">
+                <button type="submit" class="btn-del" title="Verwijderen">✕</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty">
+      {% if zoek %}
+        Geen vrijwilligers gevonden voor "{{ zoek }}".
+      {% else %}
+        Nog geen vrijwilligers toegevoegd.
+        <a href="/toevoegen" style="color:#1A6CC4;display:block;margin-top:.5rem">Voeg de eerste toe →</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}WVF Vrijwilligers{% endblock %}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f0f4f8; color: #1e293b; min-height: 100vh; }
+    a { color: inherit; text-decoration: none; }
+
+    .pub-header {
+      background: #1A6CC4; color: #fff;
+      padding: .75rem 1.25rem;
+      display: flex; align-items: center; gap: .75rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    }
+    .pub-logo-wrap { width: 50px; height: 50px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+    .pub-logo-wrap img { height: 44px; width: auto; }
+    .pub-header h1 { font-size: 1.05rem; font-weight: 700; line-height: 1.2; }
+    .pub-header .sub { font-size: .72rem; opacity: .65; display: block; }
+
+    .pub-page { max-width: 860px; margin: 1.5rem auto; padding: 0 1.25rem; }
+    @media (max-width: 600px) { .pub-page { margin: 1rem auto; padding: 0 .75rem; } .card { padding: 1.25rem; } }
+
+    .card { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.04); padding: 1.75rem; }
+
+    .field { margin-bottom: 1rem; }
+    .field label { display: block; font-size: .76rem; font-weight: 600; color: #475569; margin-bottom: .3rem; text-transform: uppercase; letter-spacing: .04em; }
+    .field input[type=text], .field input[type=email], .field input[type=tel], .field select {
+      width: 100%; padding: .5rem .75rem; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: .95rem; color: #1e293b; background: #fff; transition: border-color .15s, box-shadow .15s;
+    }
+    .field input:focus, .field select:focus { outline: none; border-color: #1A6CC4; box-shadow: 0 0 0 3px rgba(26,108,196,.12); }
+
+    .frow { display: grid; gap: .75rem 1.25rem; margin-bottom: .75rem; }
+    .frow.c2 { grid-template-columns: 1fr 1fr; }
+    .frow.c3 { grid-template-columns: 2fr 1fr 2fr; }
+    @media (max-width: 600px) { .frow.c2,.frow.c3 { grid-template-columns: 1fr; } }
+
+    .section-head { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #1A6CC4; margin: 1.5rem 0 .9rem; padding-bottom: .4rem; border-bottom: 2px solid #e2e8f0; }
+    .section-head:first-child { margin-top: 0; }
+
+    .btn-primary { width: 100%; padding: .7rem; background: #1A6CC4; color: #fff; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background .15s; }
+    .btn-primary:hover { background: #155DAE; }
+
+    .checkbox-clusters { display: grid; grid-template-columns: 1fr 1fr; border: 1.5px solid #cbd5e1; border-radius: 6px; overflow: hidden; }
+    .cb-cluster { padding: .85rem 1rem; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; }
+    .cb-cluster:nth-child(2n) { border-right: none; }
+    .cb-cluster:nth-last-child(-n+2) { border-bottom: none; }
+    .cb-cluster-title { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #1A6CC4; margin-bottom: .55rem; padding-bottom: .35rem; border-bottom: 1px solid #e2e8f0; }
+    .cb-item { display: flex; align-items: center; gap: .55rem; padding: .3rem .25rem; font-size: .88rem; cursor: pointer; border-radius: 4px; transition: background .1s; }
+    .cb-item:hover { background: #f1f5f9; }
+    .cb-item input[type=checkbox] { accent-color: #1A6CC4; width: 15px; height: 15px; flex-shrink: 0; cursor: pointer; }
+    @media (max-width: 580px) { .checkbox-clusters { grid-template-columns: 1fr; } .cb-cluster:nth-child(2n) { border-right: none; } .cb-cluster:nth-last-child(-n+2) { border-bottom: 1px solid #e2e8f0; } .cb-cluster:last-child { border-bottom: none; } }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+<header class="pub-header">
+  <div class="pub-logo-wrap">
+    <img src="/static/logo.png" alt="WVF" onerror="this.parentElement.style.display='none'">
+  </div>
+  <div>
+    <h1>Voetbalvereniging W.V.F.</h1>
+    <span class="sub">Vrijwilligersaanmelding</span>
+  </div>
+</header>
+
+{% block content %}{% endblock %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

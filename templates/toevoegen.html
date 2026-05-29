@@ -1,0 +1,264 @@
+{% extends 'base.html' %}
+{% block title %}Vrijwilliger toevoegen — WVF{% endblock %}
+
+{% block head %}
+<style>
+  .form-page { max-width: 860px; margin: 2rem auto; padding: 0 1.5rem; }
+  .section-head {
+    font-size: .78rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .07em; color: #1A6CC4;
+    margin: 1.75rem 0 .9rem; padding-bottom: .4rem;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  .section-head:first-child { margin-top: 0; }
+  .frow { display: grid; gap: .75rem 1.25rem; margin-bottom: .75rem; }
+  .frow.c2 { grid-template-columns: 1fr 1fr; }
+  .frow.c3 { grid-template-columns: 2fr 1fr 2fr; }
+  .frow.c3b { grid-template-columns: 1fr 1fr 1fr; }
+  .frow.c12 { grid-template-columns: 1fr 2fr; }
+  .frow.half { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 620px) { .frow.c2,.frow.c3,.frow.c3b,.frow.c12,.frow.half { grid-template-columns: 1fr; } }
+  textarea.finput {
+    width: 100%; padding: .5rem .75rem;
+    border: 1.5px solid #cbd5e1; border-radius: 6px;
+    font-size: .95rem; font-family: inherit; resize: vertical; min-height: 80px;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  textarea.finput:focus { outline: none; border-color: #1A6CC4; box-shadow: 0 0 0 3px rgba(26,108,196,.12); }
+  .checkbox-clusters {
+    display: grid; grid-template-columns: 1fr 1fr;
+    border: 1.5px solid #cbd5e1; border-radius: 6px; overflow: hidden;
+  }
+  .cb-cluster {
+    padding: .85rem 1rem;
+    border-right: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .cb-cluster:nth-child(2n)      { border-right: none; }
+  .cb-cluster:nth-last-child(-n+2) { border-bottom: none; }
+  .cb-cluster-title {
+    font-size: .72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .05em; color: #1A6CC4;
+    margin-bottom: .55rem; padding-bottom: .35rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .cb-item {
+    display: flex; align-items: center; gap: .55rem;
+    padding: .3rem .25rem; font-size: .88rem; cursor: pointer;
+    border-radius: 4px; transition: background .1s;
+  }
+  .cb-item:hover { background: #f1f5f9; }
+  .cb-item input[type=checkbox] { accent-color: #1A6CC4; width: 15px; height: 15px; flex-shrink: 0; cursor: pointer; }
+  @media (max-width: 620px) { .checkbox-clusters { grid-template-columns: 1fr; }
+    .cb-cluster:nth-child(2n) { border-right: none; }
+    .cb-cluster:nth-last-child(-n+2) { border-bottom: 1px solid #e2e8f0; }
+    .cb-cluster:last-child { border-bottom: none; }
+  }
+  .form-actions {
+    display: flex; gap: 1rem;
+    margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid #e2e8f0;
+  }
+  .btn-cancel {
+    flex: 1; padding: .62rem; background: #f1f5f9; color: #475569;
+    border: 1.5px solid #e2e8f0; border-radius: 6px; font-size: .95rem;
+    font-weight: 600; cursor: pointer; text-align: center; text-decoration: none;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .btn-cancel:hover { background: #e2e8f0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-page">
+  <div class="breadcrumb">
+    <a href="/">Vrijwilligers</a>
+    <span>›</span>
+    <span>Toevoegen</span>
+  </div>
+
+  <div class="card">
+    <form method="POST" action="/toevoegen">
+
+      <!-- ── Persoonsgegevens ── -->
+      <div class="section-head">Persoonsgegevens</div>
+
+      <div class="frow c3">
+        <div class="field">
+          <label>Voornaam <span style="color:#dc2626">*</span></label>
+          <input type="text" name="voornaam" required placeholder="Voornaam" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Tussenvoegsel</label>
+          <input type="text" name="tussenvoegsel" placeholder="van" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Achternaam <span style="color:#dc2626">*</span></label>
+          <input type="text" name="achternaam" required placeholder="Achternaam" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="frow">
+        <div class="field">
+          <label>Adres</label>
+          <input type="text" name="adres" placeholder="Straat + huisnummer" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="frow c2">
+        <div class="field">
+          <label>Postcode</label>
+          <input type="text" name="postcode" placeholder="1234 AB" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Woonplaats</label>
+          <input type="text" name="woonplaats" placeholder="Stad" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="frow half">
+        <div class="field">
+          <label>Geboortedatum</label>
+          <input type="text" name="geboortedatum" placeholder="DD-MM-JJJJ" autocomplete="off">
+        </div>
+      </div>
+
+      <!-- ── Contactgegevens ── -->
+      <div class="section-head">Contactgegevens</div>
+
+      <div class="frow c2">
+        <div class="field">
+          <label>E-mailadres</label>
+          <input type="email" name="email" placeholder="naam@voorbeeld.nl" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Mobiel nummer</label>
+          <input type="tel" name="telefoonnummer" placeholder="06-12345678" autocomplete="off">
+        </div>
+      </div>
+
+      <!-- ── Relatie met WVF ── -->
+      <div class="section-head">Relatie met WVF</div>
+
+      <div class="frow c12">
+        <div class="field">
+          <label>KNVB-lid</label>
+          <select name="knvb_lid">
+            <option value="">—</option>
+            <option value="Ja">Ja</option>
+            <option value="Nee">Nee</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Relatienummer</label>
+          <input type="text" name="relatienummer" placeholder="Relatienummer" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="frow half">
+        <div class="field">
+          <label>Ouder/verzorger</label>
+          <select name="ouder_verzorger">
+            <option value="">—</option>
+            <option value="Ja">Ja</option>
+            <option value="Nee">Nee</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="frow c2">
+        <div class="field">
+          <label>Naam kind</label>
+          <input type="text" name="naam_kind" placeholder="Naam kind" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Team kind</label>
+          <input type="text" name="team_kind" placeholder="Team" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="frow c3b">
+        <div class="field">
+          <label>Eigen bedrijf</label>
+          <select name="eigen_bedrijf">
+            <option value="">—</option>
+            <option value="Ja">Ja</option>
+            <option value="Nee">Nee</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Sponsorinteresse</label>
+          <select name="sponsor_interesse">
+            <option value="">—</option>
+            <option value="Ja">Ja</option>
+            <option value="Nee">Nee</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Vriend van WVF interesse</label>
+          <select name="vriend_wvf">
+            <option value="">—</option>
+            <option value="Ja">Ja</option>
+            <option value="Nee">Nee</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ── Algemene administratie ── -->
+      <div class="section-head">Algemene administratie</div>
+
+      <div class="frow c2">
+        <div class="field">
+          <label>AVG-toestemming</label>
+          <select name="avg_toestemming">
+            <option value="">—</option>
+            <option value="Ja">Ja</option>
+            <option value="Nee">Nee</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Status vrijwilliger</label>
+          <select name="status_vrijwilliger">
+            <option value="">—</option>
+            <option value="Actief">Actief</option>
+            <option value="Inactief">Inactief</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="frow">
+        <div class="field">
+          <label>Opmerkingen algemeen</label>
+          <textarea name="opmerkingen" class="finput" placeholder="Opmerkingen…"></textarea>
+        </div>
+      </div>
+
+      <!-- ── Profielen ── -->
+      <div class="section-head">Profielen</div>
+
+      <div class="frow">
+        <div class="field">
+          <div class="checkbox-clusters">
+            {% for cluster_naam, namen in profielen_clusters %}
+            <div class="cb-cluster">
+              <div class="cb-cluster-title">{{ cluster_naam }}</div>
+              {% for naam in namen %}
+              <label class="cb-item">
+                <input type="checkbox" name="profielen" value="{{ naam }}">
+                {{ naam }}
+              </label>
+              {% endfor %}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <a href="/" class="btn-cancel">Annuleren</a>
+        <button type="submit" class="btn-primary" style="flex:2">Vrijwilliger opslaan</button>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock %}

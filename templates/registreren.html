@@ -1,0 +1,87 @@
+{% extends 'base_public.html' %}
+{% block title %}Aanmelden als vrijwilliger — WVF{% endblock %}
+
+{% block content %}
+<div class="pub-page">
+  <div class="card">
+    <p style="font-size:.95rem;color:#475569;margin-bottom:1.5rem;line-height:1.6">
+      Welkom bij WVF! Vul onderstaand formulier in om je aan te melden als vrijwilliger.
+      Na je aanmelding nemen we contact met je op.
+    </p>
+
+    <form method="POST" action="/registreren">
+
+      <div class="section-head">Persoonsgegevens</div>
+      <div class="frow c3">
+        <div class="field">
+          <label>Voornaam <span style="color:#dc2626">*</span></label>
+          <input type="text" name="voornaam" required placeholder="Voornaam" autocomplete="given-name">
+        </div>
+        <div class="field">
+          <label>Tussenvoegsel</label>
+          <input type="text" name="tussenvoegsel" placeholder="van" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Achternaam <span style="color:#dc2626">*</span></label>
+          <input type="text" name="achternaam" required placeholder="Achternaam" autocomplete="family-name">
+        </div>
+      </div>
+      <div class="frow">
+        <div class="field">
+          <label>Adres</label>
+          <input type="text" name="adres" placeholder="Straat + huisnummer" autocomplete="street-address">
+        </div>
+      </div>
+      <div class="frow c2">
+        <div class="field">
+          <label>Postcode</label>
+          <input type="text" name="postcode" placeholder="1234 AB" autocomplete="postal-code">
+        </div>
+        <div class="field">
+          <label>Woonplaats</label>
+          <input type="text" name="woonplaats" placeholder="Stad" autocomplete="address-level2">
+        </div>
+      </div>
+      <div class="frow c2">
+        <div class="field">
+          <label>Geboortedatum</label>
+          <input type="text" name="geboortedatum" placeholder="DD-MM-JJJJ">
+        </div>
+      </div>
+
+      <div class="section-head">Contactgegevens</div>
+      <div class="frow c2">
+        <div class="field">
+          <label>E-mailadres</label>
+          <input type="email" name="email" placeholder="naam@voorbeeld.nl" autocomplete="email">
+        </div>
+        <div class="field">
+          <label>Mobiel nummer</label>
+          <input type="tel" name="telefoonnummer" placeholder="06-12345678" autocomplete="tel">
+        </div>
+      </div>
+
+      <div class="section-head">Waar wil je je voor inzetten? <span style="color:#dc2626">*</span></div>
+      <p style="font-size:.85rem;color:#64748b;margin-bottom:.75rem">Selecteer één of meerdere profielen.</p>
+
+      <div class="checkbox-clusters">
+        {% for cluster_naam, namen in profielen_clusters %}
+        <div class="cb-cluster">
+          <div class="cb-cluster-title">{{ cluster_naam }}</div>
+          {% for naam in namen %}
+          <label class="cb-item">
+            <input type="checkbox" name="profielen" value="{{ naam }}">
+            {{ naam }}
+          </label>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+
+      <button type="submit" class="btn-primary" style="margin-top:1.5rem">
+        Aanmelding versturen →
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}
