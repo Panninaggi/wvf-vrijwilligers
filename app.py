@@ -711,9 +711,9 @@ def intake_opslaan(taak_id):
 @rol_vereist('beheerder')
 def beheer():
     conn = get_db()
-    n_profielen = conn.execute('SELECT COUNT(*) FROM profielen').fetchone()[0]
-    n_eigenaren = conn.execute('SELECT COUNT(*) FROM eigenaren').fetchone()[0]
-    n_gebruikers = conn.execute('SELECT COUNT(*) FROM gebruikers').fetchone()[0]
+    n_profielen = conn.scalar('SELECT COUNT(*) FROM profielen')
+    n_eigenaren = conn.scalar('SELECT COUNT(*) FROM eigenaren')
+    n_gebruikers = conn.scalar('SELECT COUNT(*) FROM gebruikers')
     conn.close()
     return render_template('beheer.html', n_profielen=n_profielen,
                            n_eigenaren=n_eigenaren, n_gebruikers=n_gebruikers)
@@ -806,7 +806,8 @@ def profiel_toevoegen():
         conn.execute('INSERT INTO profielen (naam, eigenaar_id) VALUES (?,?)',
                      (naam, request.form.get('eigenaar_id') or None))
         conn.commit()
-    except sqlite3.IntegrityError:
+    except Exception:
+        conn.rollback()
         flash('Een profiel met deze naam bestaat al.', 'error')
     conn.close()
     return redirect(url_for('profielen_beheer'))
@@ -888,16 +889,17 @@ def gebruiker_toevoegen():
         return redirect(url_for('gebruikers'))
     conn = get_db()
     try:
-        uid = conn.execute(
+        uid = conn.insert(
             'INSERT INTO gebruikers (voornaam, achternaam, email, wachtwoord) VALUES (?,?,?,?)',
             (voornaam, achternaam, email, generate_password_hash(wachtwoord))
-        ).lastrowid
+        )
         for rol in request.form.getlist('rollen'):
             if rol in ALLE_ROLLEN:
                 conn.execute('INSERT OR IGNORE INTO gebruiker_rollen (gebruiker_id, rol) VALUES (?,?)', (uid, rol))
         conn.commit()
         flash(f'Gebruiker {voornaam} {achternaam} aangemaakt.', 'success')
-    except sqlite3.IntegrityError:
+    except Exception:
+        conn.rollback()
         flash('Dit e-mailadres is al in gebruik.', 'error')
     conn.close()
     return redirect(url_for('gebruikers'))
