@@ -128,7 +128,11 @@ class _PGConn:
         self._c = c
 
     def _fix(self, sql):
-        return sql.replace('?', '%s')
+        import re
+        sql = sql.replace('?', '%s')
+        # SQLite :naam → PostgreSQL %(naam)s
+        sql = re.sub(r':([a-zA-Z_][a-zA-Z0-9_]*)', r'%(\1)s', sql)
+        return sql
 
     def execute(self, sql, params=()):
         cur = self._c.cursor()
