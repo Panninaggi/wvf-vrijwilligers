@@ -26,18 +26,26 @@
   <table>
     <thead>
       <tr>
+        {% if toon_actie %}<th></th>{% endif %}
         <th>Vrijwilliger</th>
         <th>Profiel</th>
         <th>Eigenaar</th>
         <th>Aangemeld</th>
         <th>Status</th>
         <th>Intake</th>
-        {% if toon_actie %}<th></th>{% endif %}
       </tr>
     </thead>
     <tbody>
       {% for t in rijen %}
       <tr {{ 'class="completed-row"' if t.status == 'Voltooid' else '' }}>
+        {% if toon_actie %}
+        <td style="white-space:nowrap">
+          <a href="/intake/{{ t.id }}"
+             style="font-size:.82rem;color:#1A6CC4;border:1px solid #1A6CC4;padding:.3rem .65rem;border-radius:4px;white-space:nowrap;display:inline-block">
+            {% if t.intake_id %}Bewerken{% else %}Intake invullen{% endif %}
+          </a>
+        </td>
+        {% endif %}
         <td>
           <div class="vname">
             {% if t.vw_voornaam %}{{ t.vw_voornaam }}{% if t.vw_tv %} {{ t.vw_tv }}{% endif %} {{ t.vw_achternaam }}
@@ -57,17 +65,9 @@
           {% if t.intake_id %}
             <span class="intake-badge {{ t.intake_status }}">{{ t.intake_status }}</span>
           {% else %}
-            <span style="color:#94a3b8;font-size:.8rem">Nog niet ingevuld</span>
+            <span style="color:#94a3b8;font-size:.8rem">—</span>
           {% endif %}
         </td>
-        {% if toon_actie %}
-        <td>
-          <a href="/intake/{{ t.id }}"
-             style="font-size:.82rem;color:#1A6CC4;border:1px solid #1A6CC4;padding:.2rem .55rem;border-radius:4px;white-space:nowrap">
-            {% if t.intake_id %}Bewerken{% else %}Intake invullen{% endif %}
-          </a>
-        </td>
-        {% endif %}
       </tr>
       {% endfor %}
     </tbody>
