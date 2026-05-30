@@ -432,6 +432,12 @@ def genereer_qr_base64(url):
 
 # ── Template filters ───────────────────────────────────────────────────────────
 
+@app.template_filter('selectattr_any')
+def selectattr_any_filter(d, keys):
+    """Geeft True als tenminste één sleutel een waarde heeft in dict d."""
+    return any(d.get(k) for k in keys)
+
+
 @app.template_filter('datum')
 def datum_filter(waarde):
     """Werkt met zowel SQLite strings als PostgreSQL datetime objecten."""
@@ -814,14 +820,32 @@ def toevoegen():
 def vrijwilliger_detail(vid):
     conn = get_db()
     v = conn.execute('SELECT * FROM vrijwilligers WHERE id = ?', (vid,)).fetchone()
-    profielen_rows = conn.execute('SELECT naam FROM profielen ORDER BY naam').fetchall()
-    conn.close()
     if not v:
+        conn.close()
         flash('Vrijwilliger niet gevonden.', 'error')
         return redirect(url_for('index'))
+    profielen_rows = conn.execute('SELECT naam FROM profielen ORDER BY naam').fetchall()
+    intakes_rows = conn.execute('''
+        SELECT t.profiel, i.formulier_data, i.status,
+               i.ingevuld, i.bijgewerkt
+        FROM intakes i
+        JOIN taken t ON i.taak_id = t.id
+        WHERE t.vrijwilliger_id = ?
+        ORDER BY t.profiel
+    ''', (vid,)).fetchall()
+    conn.close()
+
+    # Parseer JSON per intake
+    intakes = []
+    for row in intakes_rows:
+        data = json.loads(row['formulier_data']) if row['formulier_data'] else {}
+        intakes.append({'profiel': row['profiel'], 'status': row['status'],
+                        'ingevuld': row['ingevuld'], 'data': data})
+
     return render_template('vrijwilliger_detail.html',
                            v=v,
-                           profielen_clusters=cluster_profielen(profielen_rows))
+                           profielen_clusters=cluster_profielen(profielen_rows),
+                           intakes=intakes)
 
 
 @app.route('/vrijwilligers/<int:vid>', methods=['POST'])
