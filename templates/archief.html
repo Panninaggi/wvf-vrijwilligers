@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}Archief vrijwilligers — WVF{% endblock %}
+
+{% block content %}
+<div class="page">
+  <div class="card">
+    <div class="card-title-row">
+      <span class="card-title">Archief vrijwilligers</span>
+      <a href="/" class="btn-new" style="background:#475569">← Terug naar actief</a>
+    </div>
+
+    <p class="count-label">{{ vrijwilligers|length }} gearchiveerde vrijwilliger(s)</p>
+
+    {% if vrijwilligers %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Naam</th>
+            <th>Contact</th>
+            <th>Profielen</th>
+            <th>Gearchiveerd op</th>
+            <th>Reden</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in vrijwilligers %}
+          <tr style="opacity:.8">
+            <td>
+              <div class="vname">{{ v | display_naam }}</div>
+              {% if v.woonplaats %}<div class="vsub">{{ v.woonplaats }}</div>{% endif %}
+            </td>
+            <td>
+              {% if v.email %}<div><a href="mailto:{{ v.email }}" style="color:#1A6CC4">{{ v.email }}</a></div>{% endif %}
+              {% if v.telefoonnummer %}<div class="vsub">{{ v.telefoonnummer }}</div>{% endif %}
+            </td>
+            <td>
+              <div class="profile-tags">
+                {% if v.profielen %}
+                  {% for tag in v.profielen.split('||') %}
+                    {% if tag %}<span class="ptag">{{ tag }}</span>{% endif %}
+                  {% endfor %}
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              <div class="vsub">{{ v.archief_datum | datum if v.archief_datum else '—' }}</div>
+            </td>
+            <td>
+              <div style="font-size:.85rem;color:#475569;max-width:220px">
+                {{ v.archief_reden or '—' }}
+              </div>
+            </td>
+            <td>
+              <form method="POST" action="/herstellen/{{ v.id }}"
+                    onsubmit="return confirm('{{ (v | display_naam) }} herstellen naar actief?')">
+                <button type="submit" class="btn-save-sm" title="Herstellen naar actief">
+                  Herstellen
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty">Geen gearchiveerde vrijwilligers.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

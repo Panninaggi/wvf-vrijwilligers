@@ -217,6 +217,7 @@ def init_db():
     conn.create_schema()
 
     for col, typ in [
+        ('gearchiveerd','INTEGER'),('archief_reden','TEXT'),('archief_datum','TIMESTAMP'),
         ('voornaam','TEXT'),('tussenvoegsel','TEXT'),('achternaam','TEXT'),
         ('postcode','TEXT'),('woonplaats','TEXT'),('geboortedatum','TEXT'),
         ('knvb_lid','TEXT'),('relatienummer','TEXT'),('ouder_verzorger','TEXT'),
@@ -724,19 +725,22 @@ def index():
         ) t ON t.vrijwilliger_id = v.id
     '''
 
+    actief_filter = "AND (v.gearchiveerd IS NULL OR v.gearchiveerd = 0)"
     if zoek:
         q = f'%{zoek}%'
         rows = conn.execute(
             f'''SELECT v.*, t.taken_totaal, t.taken_voltooid, t.taken_lopend, t.taken_nieuw
                 FROM vrijwilligers v {taak_subquery}
-                WHERE v.naam LIKE ? OR v.voornaam LIKE ? OR v.achternaam LIKE ?
-                   OR v.email LIKE ? OR v.profielen LIKE ? OR v.woonplaats LIKE ?
+                WHERE (v.naam LIKE ? OR v.voornaam LIKE ? OR v.achternaam LIKE ?
+                   OR v.email LIKE ? OR v.profielen LIKE ? OR v.woonplaats LIKE ?)
+                {actief_filter}
                 ORDER BY v.achternaam, v.voornaam, v.naam''', (q,q,q,q,q,q)
         ).fetchall()
     else:
         rows = conn.execute(
             f'''SELECT v.*, t.taken_totaal, t.taken_voltooid, t.taken_lopend, t.taken_nieuw
                 FROM vrijwilligers v {taak_subquery}
+                WHERE (v.gearchiveerd IS NULL OR v.gearchiveerd = 0)
                 ORDER BY v.achternaam, v.voornaam, v.naam'''
         ).fetchall()
     conn.close()
@@ -804,15 +808,47 @@ def toevoegen():
     return redirect(url_for('index'))
 
 
-@app.route('/verwijderen/<int:vid>', methods=['POST'])
+@app.route('/archiveren/<int:vid>', methods=['POST'])
 @login_required
 @rol_vereist('beheerder')
-def verwijderen(vid):
+def archiveren(vid):
+    reden = request.form.get('reden', '').strip()
     conn = get_db()
-    conn.execute('DELETE FROM vrijwilligers WHERE id = ?', (vid,))
+    conn.execute('''UPDATE vrijwilligers
+                    SET gearchiveerd = 1, archief_reden = ?, archief_datum = CURRENT_TIMESTAMP
+                    WHERE id = ?''', (reden, vid))
     conn.commit()
     conn.close()
+    flash('Vrijwilliger gearchiveerd.', 'info')
     return redirect(url_for('index'))
+
+
+@app.route('/herstellen/<int:vid>', methods=['POST'])
+@login_required
+@rol_vereist('beheerder')
+def herstellen(vid):
+    conn = get_db()
+    conn.execute('''UPDATE vrijwilligers
+                    SET gearchiveerd = 0, archief_reden = NULL, archief_datum = NULL
+                    WHERE id = ?''', (vid,))
+    conn.commit()
+    conn.close()
+    flash('Vrijwilliger hersteld naar actief.', 'success')
+    return redirect(url_for('archief'))
+
+
+@app.route('/archief')
+@login_required
+@rol_vereist('beheerder')
+def archief():
+    conn = get_db()
+    rows = conn.execute('''
+        SELECT * FROM vrijwilligers
+        WHERE gearchiveerd = 1
+        ORDER BY archief_datum DESC
+    ''').fetchall()
+    conn.close()
+    return render_template('archief.html', vrijwilligers=rows)
 
 
 # ── Excel import ──────────────────────────────────────────────────────────────

@@ -6,7 +6,8 @@
   <div class="card">
     <div class="card-title-row">
       <span class="card-title">Geregistreerde vrijwilligers</span>
-      <div style="display:flex;gap:.5rem">
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <a href="/archief" class="btn-new" style="background:#64748b">Archief</a>
         <a href="/import" class="btn-new" style="background:#475569">↑ Excel importeren</a>
         <a href="/toevoegen" class="btn-new">+ Vrijwilliger toevoegen</a>
       </div>
@@ -86,10 +87,8 @@
               </div>
             </td>
             <td>
-              <form method="POST" action="/verwijderen/{{ v.id }}"
-                    onsubmit="return confirm('Vrijwilliger verwijderen?')">
-                <button type="submit" class="btn-del" title="Verwijderen">✕</button>
-              </form>
+              <button class="btn-del" title="Archiveren"
+                      onclick="openArchiveer({{ v.id }}, '{{ (v | display_naam) | replace("'", "\\'") }}')">✕</button>
             </td>
           </tr>
           {% endfor %}
@@ -108,4 +107,51 @@
     {% endif %}
   </div>
 </div>
+
+<!-- Archiveer modal -->
+<div id="archiveerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:10px;padding:1.75rem;max-width:440px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <h3 style="font-size:1rem;font-weight:700;color:#1e293b;margin-bottom:.4rem">Vrijwilliger archiveren</h3>
+    <p id="archiveerNaam" style="font-size:.88rem;color:#64748b;margin-bottom:1rem"></p>
+    <form id="archiveerForm" method="POST">
+      <div class="field">
+        <label style="font-size:.76rem;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:.3rem">
+          Reden van archivering
+        </label>
+        <textarea name="reden" id="archiveerReden" required
+          style="width:100%;padding:.5rem .75rem;border:1.5px solid #cbd5e1;border-radius:6px;font-size:.9rem;font-family:inherit;resize:vertical;min-height:80px"
+          placeholder="Bijv. gestopt als vrijwilliger, verhuisd…"></textarea>
+      </div>
+      <div style="display:flex;gap:.75rem;margin-top:1rem">
+        <button type="button" onclick="sluitModal()"
+          style="flex:1;padding:.6rem;background:#f1f5f9;color:#475569;border:1.5px solid #e2e8f0;border-radius:6px;font-size:.9rem;font-weight:600;cursor:pointer">
+          Annuleren
+        </button>
+        <button type="submit"
+          style="flex:1;padding:.6rem;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:.9rem;font-weight:600;cursor:pointer">
+          Archiveren
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function openArchiveer(id, naam) {
+    document.getElementById('archiveerNaam').textContent = naam;
+    document.getElementById('archiveerForm').action = '/archiveren/' + id;
+    document.getElementById('archiveerReden').value = '';
+    const modal = document.getElementById('archiveerModal');
+    modal.style.display = 'flex';
+    setTimeout(() => document.getElementById('archiveerReden').focus(), 50);
+  }
+  function sluitModal() {
+    document.getElementById('archiveerModal').style.display = 'none';
+  }
+  document.getElementById('archiveerModal').addEventListener('click', function(e) {
+    if (e.target === this) sluitModal();
+  });
+</script>
 {% endblock %}
