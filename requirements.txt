@@ -3,3 +3,4 @@ gunicorn>=21.2.0
 qrcode[pil]>=7.4
 psycopg2-binary>=2.9.9
 pg8000>=1.30.0
+openpyxl>=3.1.0

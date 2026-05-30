@@ -790,6 +790,148 @@ def verwijderen(vid):
     return redirect(url_for('index'))
 
 
+# ── Excel import ──────────────────────────────────────────────────────────────
+
+IMPORT_KOLOMMEN = [
+    'Voornaam', 'Tussenvoegsel', 'Achternaam', 'Adres', 'Postcode',
+    'Woonplaats', 'Geboortedatum', 'E-mailadres', 'Telefoonnummer', 'Profielen',
+]
+
+
+@app.route('/import', methods=['GET'])
+@login_required
+@rol_vereist('beheerder')
+def import_form():
+    return render_template('import.html')
+
+
+@app.route('/import/template')
+@login_required
+@rol_vereist('beheerder')
+def import_template():
+    import openpyxl, io
+    from flask import send_file
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Vrijwilligers'
+
+    # Headers met opmaak
+    from openpyxl.styles import Font, PatternFill, Alignment
+    header_fill = PatternFill('solid', fgColor='1A6CC4')
+    for col, naam in enumerate(IMPORT_KOLOMMEN, 1):
+        cel = ws.cell(row=1, column=col, value=naam)
+        cel.font = Font(bold=True, color='FFFFFF')
+        cel.fill = header_fill
+        cel.alignment = Alignment(horizontal='center')
+        ws.column_dimensions[cel.column_letter].width = max(14, len(naam) + 2)
+
+    # Voorbeeldrij
+    ws.append(['Jan', 'van', 'Janssen', 'Dorpstraat 1', '8000 AA',
+               'Zwolle', '01-01-1985', 'jan@wvf.nl', '06-12345678',
+               'Horeca, Jeugd'])
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return send_file(buf, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                     as_attachment=True, download_name='wvf-vrijwilligers-import.xlsx')
+
+
+@app.route('/import', methods=['POST'])
+@login_required
+@rol_vereist('beheerder')
+def import_verwerken():
+    bestand = request.files.get('bestand')
+    if not bestand or not bestand.filename.endswith(('.xlsx', '.xls')):
+        flash('Selecteer een geldig Excel-bestand (.xlsx).', 'error')
+        return redirect(url_for('import_form'))
+
+    try:
+        import openpyxl, io
+        wb = openpyxl.load_workbook(io.BytesIO(bestand.read()), data_only=True)
+        ws = wb.active
+    except Exception as e:
+        flash(f'Kon bestand niet lezen: {e}', 'error')
+        return redirect(url_for('import_form'))
+
+    # Kolomtoewijzing op basis van headernamen (hoofdlettersonafhankelijk)
+    headers = {}
+    for col in ws.iter_cols(min_row=1, max_row=1):
+        for cel in col:
+            if cel.value:
+                headers[str(cel.value).strip().lower()] = cel.column - 1
+
+    def kolom(rij_waarden, *namen):
+        for naam in namen:
+            idx = headers.get(naam.lower())
+            if idx is not None and idx < len(rij_waarden):
+                val = rij_waarden[idx]
+                return str(val).strip() if val is not None else ''
+        return ''
+
+    conn = get_db()
+    # Haal geldige profielnamen op
+    geldige_profielen = {r['naam'].lower(): r['naam']
+                         for r in conn.execute('SELECT naam FROM profielen').fetchall()}
+
+    toegevoegd, overgeslagen, fouten = 0, 0, []
+
+    for rijnr, rij in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+        if all(v is None or str(v).strip() == '' for v in rij):
+            continue  # lege rij
+
+        voornaam   = kolom(rij, 'voornaam')
+        achternaam = kolom(rij, 'achternaam')
+
+        if not voornaam or not achternaam:
+            fouten.append(f'Rij {rijnr}: voornaam of achternaam ontbreekt — overgeslagen')
+            overgeslagen += 1
+            continue
+
+        tussenvoegsel = kolom(rij, 'tussenvoegsel')
+        naam = ' '.join(p for p in [voornaam, tussenvoegsel, achternaam] if p)
+
+        # Profielen verwerken
+        profiel_tekst = kolom(rij, 'profielen', 'profiel')
+        profiel_namen = []
+        for p in profiel_tekst.split(','):
+            p = p.strip()
+            if p.lower() in geldige_profielen:
+                profiel_namen.append(geldige_profielen[p.lower()])
+            elif p:
+                fouten.append(f'Rij {rijnr}: onbekend profiel "{p}" — overgeslagen')
+
+        try:
+            conn.insert('''
+                INSERT INTO vrijwilligers
+                (naam, voornaam, tussenvoegsel, achternaam, adres, postcode,
+                 woonplaats, geboortedatum, email, telefoonnummer,
+                 profielen, status_vrijwilliger)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+            ''', (naam, voornaam, tussenvoegsel, achternaam,
+                  kolom(rij, 'adres'),
+                  kolom(rij, 'postcode'),
+                  kolom(rij, 'woonplaats'),
+                  kolom(rij, 'geboortedatum'),
+                  kolom(rij, 'e-mailadres', 'email'),
+                  kolom(rij, 'telefoonnummer', 'telefoon'),
+                  '||'.join(profiel_namen),
+                  'Nieuw'))
+            toegevoegd += 1
+        except Exception as e:
+            fouten.append(f'Rij {rijnr} ({naam}): {e}')
+            overgeslagen += 1
+
+    conn.commit()
+    conn.close()
+
+    return render_template('import.html',
+                           toegevoegd=toegevoegd,
+                           overgeslagen=overgeslagen,
+                           fouten=fouten,
+                           klaar=True)
+
+
 # ── Taken ──────────────────────────────────────────────────────────────────────
 
 @app.route('/taken')
