@@ -569,10 +569,15 @@ def wachtwoord_reset(token):
 
     if request.method == 'POST':
         nieuw = request.form.get('wachtwoord', '')
+        bevestiging = request.form.get('bevestiging', '')
         if len(nieuw) < 6:
             flash('Wachtwoord moet minimaal 6 tekens zijn.', 'error')
             conn.close()
-            return render_template('wachtwoord_reset.html', token=token)
+            return render_template('wachtwoord_reset.html', token=token, naam=record['voornaam'])
+        if nieuw != bevestiging:
+            flash('De wachtwoorden komen niet overeen.', 'error')
+            conn.close()
+            return render_template('wachtwoord_reset.html', token=token, naam=record['voornaam'])
         conn.execute('UPDATE gebruikers SET wachtwoord = ? WHERE id = ?',
                      (generate_password_hash(nieuw), record['gebruiker_id']))
         conn.execute('DELETE FROM wachtwoord_tokens WHERE token = ?', (token,))
@@ -591,6 +596,7 @@ def mijn_wachtwoord():
     if request.method == 'POST':
         huidig = request.form.get('huidig', '')
         nieuw = request.form.get('nieuw', '')
+        bevestiging = request.form.get('bevestiging', '')
         conn = get_db()
         user = conn.execute('SELECT * FROM gebruikers WHERE id = ?',
                             (session['user_id'],)).fetchone()
@@ -601,6 +607,10 @@ def mijn_wachtwoord():
         if len(nieuw) < 6:
             conn.close()
             flash('Nieuw wachtwoord moet minimaal 6 tekens zijn.', 'error')
+            return render_template('mijn_wachtwoord.html')
+        if nieuw != bevestiging:
+            conn.close()
+            flash('De wachtwoorden komen niet overeen.', 'error')
             return render_template('mijn_wachtwoord.html')
         conn.execute('UPDATE gebruikers SET wachtwoord = ? WHERE id = ?',
                      (generate_password_hash(nieuw), session['user_id']))

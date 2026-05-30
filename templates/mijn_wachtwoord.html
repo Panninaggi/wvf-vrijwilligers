@@ -5,17 +5,40 @@
 <div class="page" style="max-width:480px">
   <div class="card">
     <div class="card-title">Wachtwoord wijzigen</div>
-    <form method="POST" action="/mijn-wachtwoord">
+    <form method="POST" action="/mijn-wachtwoord" onsubmit="return controleer()">
       <div class="field">
         <label>Huidig wachtwoord</label>
         <input type="password" name="huidig" required placeholder="••••••••" autofocus>
       </div>
       <div class="field">
         <label>Nieuw wachtwoord <span style="color:#94a3b8;font-weight:400;font-size:.78rem">(min. 6 tekens)</span></label>
-        <input type="password" name="nieuw" required placeholder="••••••••">
+        <input type="password" name="nieuw" id="nieuw" required placeholder="••••••••" oninput="checkMatch()">
+      </div>
+      <div class="field">
+        <label>Nieuw wachtwoord bevestigen</label>
+        <input type="password" name="bevestiging" id="bevestiging" required placeholder="••••••••" oninput="checkMatch()">
+        <span id="match-msg" style="font-size:.8rem;margin-top:.25rem;display:block"></span>
       </div>
       <button type="submit" class="btn-primary" style="margin-top:.5rem">Wachtwoord opslaan</button>
     </form>
+
+    <script>
+      function checkMatch() {
+        const a = document.getElementById('nieuw').value;
+        const b = document.getElementById('bevestiging').value;
+        const msg = document.getElementById('match-msg');
+        if (!b) { msg.textContent = ''; return; }
+        if (a === b) { msg.textContent = '✓ Wachtwoorden komen overeen'; msg.style.color = '#166534'; }
+        else         { msg.textContent = '✗ Wachtwoorden komen niet overeen'; msg.style.color = '#dc2626'; }
+      }
+      function controleer() {
+        const a = document.getElementById('nieuw').value;
+        const b = document.getElementById('bevestiging').value;
+        if (a !== b) { alert('De wachtwoorden komen niet overeen.'); return false; }
+        if (a.length < 6) { alert('Wachtwoord moet minimaal 6 tekens zijn.'); return false; }
+        return true;
+      }
+    </script>
   </div>
 </div>
 {% endblock %}
