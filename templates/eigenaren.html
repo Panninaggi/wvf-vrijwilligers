@@ -113,7 +113,7 @@
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Naam</th><th>Contact</th><th></th></tr>
+            <tr><th>Naam</th><th>Contact</th><th>Account</th><th></th></tr>
           </thead>
           <tbody>
             {% for e in eigenaren %}
@@ -126,6 +126,20 @@
               <td>
                 {% if e.email %}<div><a href="mailto:{{ e.email }}" style="color:#1A6CC4">{{ e.email }}</a></div>{% endif %}
                 {% if e.telefoonnummer %}<div class="vsub">{{ e.telefoonnummer }}</div>{% endif %}
+              </td>
+              <td>
+                {% if e.gebruiker_id %}
+                  <span style="font-size:.78rem;color:#166534;background:#dcfce7;padding:.15rem .5rem;border-radius:4px;border:1px solid #bbf7d0">
+                    Account actief
+                  </span>
+                {% elif e.email %}
+                  <form method="POST" action="/beheer/eigenaren/{{ e.id }}/account-aanmaken"
+                        onsubmit="return confirm('Account aanmaken voor {{ e.voornaam }} {{ e.achternaam }} en welkomstmail sturen?')">
+                    <button type="submit" class="btn-save-sm">Account aanmaken</button>
+                  </form>
+                {% else %}
+                  <span style="font-size:.78rem;color:#94a3b8">Geen e-mail</span>
+                {% endif %}
               </td>
               <td>
                 <form method="POST" action="/beheer/eigenaren/verwijderen/{{ e.id }}"

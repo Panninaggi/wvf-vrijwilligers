@@ -167,7 +167,10 @@
           Beheer
         </a>
         {% endif %}
-        <span class="nav-user">{{ huidig_user.voornaam }}</span>
+        <a href="/mijn-wachtwoord" class="nav-item {{ 'active' if request.path == '/mijn-wachtwoord' else '' }}" title="Wachtwoord wijzigen">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/></svg>
+          {{ huidig_user.voornaam }}
+        </a>
         <a href="/logout" class="nav-item">Uitloggen</a>
       {% else %}
         <a href="/login" class="nav-item">Inloggen</a>

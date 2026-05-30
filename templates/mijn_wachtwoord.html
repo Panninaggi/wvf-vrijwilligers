@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Wachtwoord wijzigen — WVF{% endblock %}
+
+{% block content %}
+<div class="page" style="max-width:480px">
+  <div class="card">
+    <div class="card-title">Wachtwoord wijzigen</div>
+    <form method="POST" action="/mijn-wachtwoord">
+      <div class="field">
+        <label>Huidig wachtwoord</label>
+        <input type="password" name="huidig" required placeholder="••••••••" autofocus>
+      </div>
+      <div class="field">
+        <label>Nieuw wachtwoord <span style="color:#94a3b8;font-weight:400;font-size:.78rem">(min. 6 tekens)</span></label>
+        <input type="password" name="nieuw" required placeholder="••••••••">
+      </div>
+      <button type="submit" class="btn-primary" style="margin-top:.5rem">Wachtwoord opslaan</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

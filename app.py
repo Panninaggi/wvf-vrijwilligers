@@ -82,6 +82,11 @@ _SCHEMA = '''
         formulier_data TEXT, status TEXT NOT NULL DEFAULT 'Concept',
         ingevuld TIMESTAMP DEFAULT CURRENT_TIMESTAMP, bijgewerkt TIMESTAMP
     );
+    CREATE TABLE IF NOT EXISTS wachtwoord_tokens (
+        token TEXT PRIMARY KEY,
+        gebruiker_id INTEGER NOT NULL REFERENCES gebruikers(id) ON DELETE CASCADE,
+        aangemaakt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
 '''
 
 
@@ -355,6 +360,58 @@ def email_eigenaar_notificatie(eigenaar_email, eigenaar_naam, vrijwilliger_naam,
     send_email(eigenaar_email, f'Nieuwe aanmelding: {vrijwilliger_naam} — {profiel}', html)
 
 
+def email_welkom(to_addr, naam, wachtwoord):
+    base_url = os.environ.get('APP_URL', 'http://localhost:5000')
+    html = f'''
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+      <div style="background:#1A6CC4;color:white;padding:1.5rem;border-radius:8px 8px 0 0">
+        <h2 style="margin:0">Welkom bij WVF Vrijwilligersbeheer</h2>
+      </div>
+      <div style="background:#f8fafc;padding:1.5rem;border-radius:0 0 8px 8px;border:1px solid #e2e8f0">
+        <p>Beste {naam},</p>
+        <p>Er is een account voor je aangemaakt. Je kunt inloggen met:</p>
+        <table style="margin:1rem 0;border-collapse:collapse">
+          <tr><td style="padding:.3rem 1rem .3rem 0;color:#64748b">E-mail</td><td><strong>{to_addr}</strong></td></tr>
+          <tr><td style="padding:.3rem 1rem .3rem 0;color:#64748b">Wachtwoord</td><td><strong>{wachtwoord}</strong></td></tr>
+        </table>
+        <p style="margin-top:1.5rem">
+          <a href="{base_url}/login"
+             style="background:#1A6CC4;color:white;padding:.75rem 1.5rem;border-radius:6px;text-decoration:none;font-weight:600">
+            Inloggen →
+          </a>
+        </p>
+        <p style="color:#94a3b8;font-size:.85rem;margin-top:2rem">
+          Wijzig je wachtwoord na je eerste inlog via het menu rechtsboven.
+        </p>
+      </div>
+    </div>'''
+    send_email(to_addr, 'Je account voor WVF Vrijwilligersbeheer', html)
+
+
+def email_wachtwoord_reset(to_addr, naam, token):
+    base_url = os.environ.get('APP_URL', 'http://localhost:5000')
+    html = f'''
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+      <div style="background:#1A6CC4;color:white;padding:1.5rem;border-radius:8px 8px 0 0">
+        <h2 style="margin:0">Wachtwoord opnieuw instellen</h2>
+      </div>
+      <div style="background:#f8fafc;padding:1.5rem;border-radius:0 0 8px 8px;border:1px solid #e2e8f0">
+        <p>Beste {naam},</p>
+        <p>Klik op de knop hieronder om een nieuw wachtwoord in te stellen. De link is <strong>1 uur geldig</strong>.</p>
+        <p style="margin-top:1.5rem">
+          <a href="{base_url}/wachtwoord-reset/{token}"
+             style="background:#1A6CC4;color:white;padding:.75rem 1.5rem;border-radius:6px;text-decoration:none;font-weight:600">
+            Wachtwoord opnieuw instellen →
+          </a>
+        </p>
+        <p style="color:#94a3b8;font-size:.85rem;margin-top:2rem">
+          Heb je dit niet aangevraagd? Dan hoef je niets te doen.
+        </p>
+      </div>
+    </div>'''
+    send_email(to_addr, 'Wachtwoord opnieuw instellen — WVF', html)
+
+
 # ── QR-code ────────────────────────────────────────────────────────────────────
 
 def genereer_qr_base64(url):
@@ -452,6 +509,106 @@ def logout():
     session.clear()
     flash('Je bent uitgelogd.', 'info')
     return redirect(url_for('login'))
+
+
+@app.route('/wachtwoord-vergeten', methods=['GET', 'POST'])
+def wachtwoord_vergeten():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        conn = get_db()
+        user = conn.execute(
+            'SELECT * FROM gebruikers WHERE LOWER(email) = ? AND actief = 1', (email,)
+        ).fetchone()
+        if user:
+            token = secrets.token_urlsafe(32)
+            conn.execute(
+                'INSERT INTO wachtwoord_tokens (token, gebruiker_id) VALUES (?,?)',
+                (token, user['id'])
+            )
+            conn.commit()
+            naam = f"{user['voornaam']} {user['achternaam']}"
+            email_wachtwoord_reset(email, naam, token)
+        conn.close()
+        # Altijd dezelfde melding (voorkomt dat je kunt achterhalen of een e-mail bestaat)
+        flash('Als dit e-mailadres bekend is, ontvang je een e-mail met een resetlink.', 'info')
+        return redirect(url_for('wachtwoord_vergeten'))
+    return render_template('wachtwoord_vergeten.html')
+
+
+@app.route('/wachtwoord-reset/<token>', methods=['GET', 'POST'])
+def wachtwoord_reset(token):
+    conn = get_db()
+    record = conn.execute('''
+        SELECT wt.*, g.voornaam, g.achternaam, g.email
+        FROM wachtwoord_tokens wt
+        JOIN gebruikers g ON wt.gebruiker_id = g.id
+        WHERE wt.token = ?
+    ''', (token,)).fetchone()
+
+    if not record:
+        conn.close()
+        flash('Ongeldige of verlopen resetlink.', 'error')
+        return redirect(url_for('login'))
+
+    # Token verlopen na 1 uur
+    from datetime import datetime, timezone, timedelta
+    aangemaakt = record['aangemaakt']
+    if hasattr(aangemaakt, 'replace'):
+        aangemaakt = aangemaakt.replace(tzinfo=None)
+    else:
+        try:
+            aangemaakt = datetime.fromisoformat(str(aangemaakt))
+        except Exception:
+            aangemaakt = datetime.now()
+    if datetime.now() - aangemaakt > timedelta(hours=1):
+        conn.execute('DELETE FROM wachtwoord_tokens WHERE token = ?', (token,))
+        conn.commit()
+        conn.close()
+        flash('Deze resetlink is verlopen. Vraag een nieuwe aan.', 'error')
+        return redirect(url_for('wachtwoord_vergeten'))
+
+    if request.method == 'POST':
+        nieuw = request.form.get('wachtwoord', '')
+        if len(nieuw) < 6:
+            flash('Wachtwoord moet minimaal 6 tekens zijn.', 'error')
+            conn.close()
+            return render_template('wachtwoord_reset.html', token=token)
+        conn.execute('UPDATE gebruikers SET wachtwoord = ? WHERE id = ?',
+                     (generate_password_hash(nieuw), record['gebruiker_id']))
+        conn.execute('DELETE FROM wachtwoord_tokens WHERE token = ?', (token,))
+        conn.commit()
+        conn.close()
+        flash('Wachtwoord gewijzigd. Je kunt nu inloggen.', 'success')
+        return redirect(url_for('login'))
+
+    conn.close()
+    return render_template('wachtwoord_reset.html', token=token, naam=record['voornaam'])
+
+
+@app.route('/mijn-wachtwoord', methods=['GET', 'POST'])
+@login_required
+def mijn_wachtwoord():
+    if request.method == 'POST':
+        huidig = request.form.get('huidig', '')
+        nieuw = request.form.get('nieuw', '')
+        conn = get_db()
+        user = conn.execute('SELECT * FROM gebruikers WHERE id = ?',
+                            (session['user_id'],)).fetchone()
+        if not check_password_hash(user['wachtwoord'], huidig):
+            conn.close()
+            flash('Huidig wachtwoord klopt niet.', 'error')
+            return render_template('mijn_wachtwoord.html')
+        if len(nieuw) < 6:
+            conn.close()
+            flash('Nieuw wachtwoord moet minimaal 6 tekens zijn.', 'error')
+            return render_template('mijn_wachtwoord.html')
+        conn.execute('UPDATE gebruikers SET wachtwoord = ? WHERE id = ?',
+                     (generate_password_hash(nieuw), session['user_id']))
+        conn.commit()
+        conn.close()
+        flash('Wachtwoord succesvol gewijzigd.', 'success')
+        return redirect(url_for('taken'))
+    return render_template('mijn_wachtwoord.html')
 
 
 # ── Publieke registratie ───────────────────────────────────────────────────────
@@ -820,6 +977,50 @@ def eigenaar_verwijderen(eid):
     conn.execute('DELETE FROM eigenaren WHERE id = ?', (eid,))
     conn.commit()
     conn.close()
+    return redirect(url_for('eigenaren'))
+
+
+@app.route('/beheer/eigenaren/<int:eid>/account-aanmaken', methods=['POST'])
+@login_required
+@rol_vereist('beheerder')
+def eigenaar_account_aanmaken(eid):
+    conn = get_db()
+    eigenaar = conn.execute('SELECT * FROM eigenaren WHERE id = ?', (eid,)).fetchone()
+    if not eigenaar or not eigenaar['email']:
+        flash('Eigenaar heeft geen e-mailadres — account aanmaken niet mogelijk.', 'error')
+        conn.close()
+        return redirect(url_for('eigenaren'))
+
+    email = eigenaar['email'].strip().lower()
+    naam = f"{eigenaar['voornaam']} {eigenaar['achternaam']}"
+
+    bestaand = conn.execute(
+        'SELECT id FROM gebruikers WHERE LOWER(email) = ?', (email,)
+    ).fetchone()
+
+    if bestaand:
+        # Koppel bestaand account aan eigenaar
+        conn.execute('UPDATE eigenaren SET gebruiker_id = ? WHERE id = ?',
+                     (bestaand['id'], eid))
+        conn.commit()
+        conn.close()
+        flash(f'Bestaand account ({email}) gekoppeld aan {naam}.', 'info')
+        return redirect(url_for('eigenaren'))
+
+    # Nieuw account aanmaken
+    ww = secrets.token_urlsafe(10)
+    uid = conn.insert(
+        'INSERT INTO gebruikers (voornaam, achternaam, email, wachtwoord) VALUES (?,?,?,?)',
+        (eigenaar['voornaam'], eigenaar['achternaam'], email, generate_password_hash(ww))
+    )
+    conn.execute('INSERT INTO gebruiker_rollen (gebruiker_id, rol) VALUES (?,?)',
+                 (uid, 'roleigenaar'))
+    conn.execute('UPDATE eigenaren SET gebruiker_id = ? WHERE id = ?', (uid, eid))
+    conn.commit()
+    conn.close()
+
+    email_welkom(email, naam, ww)
+    flash(f'Account aangemaakt voor {naam} — welkomstmail verstuurd naar {email}.', 'success')
     return redirect(url_for('eigenaren'))
 
 
