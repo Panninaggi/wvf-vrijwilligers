@@ -1069,6 +1069,21 @@ def intake_opslaan(taak_id):
     conn.execute('UPDATE taken SET status=?, bijgewerkt=CURRENT_TIMESTAMP WHERE id=?',
                  (taak_status, taak_id))
 
+    # Vrijwilliger-status bijwerken op basis van alle taken
+    if actie == 'indienen':
+        vw_id = taak['vrijwilliger_id']
+        totaal   = conn.scalar('SELECT COUNT(*) FROM taken WHERE vrijwilliger_id = ?', (vw_id,))
+        voltooid = conn.scalar(
+            "SELECT COUNT(*) FROM taken WHERE vrijwilliger_id = ? AND status = 'Voltooid'",
+            (vw_id,)
+        )
+        # Alle intakes voltooid → Actief, anders In behandeling
+        nieuwe_status = 'Actief' if (totaal > 0 and voltooid >= totaal) else 'In behandeling'
+        conn.execute(
+            'UPDATE vrijwilligers SET status_vrijwilliger = ? WHERE id = ?',
+            (nieuwe_status, vw_id)
+        )
+
     conn.commit()
     conn.close()
     flash('Intake opgeslagen.' if actie == 'opslaan' else 'Intake ingediend.', 'success')
