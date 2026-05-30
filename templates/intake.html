@@ -193,16 +193,20 @@
       <div class="isec">
         <div class="isec-head">Beschikbaarheid & inzet</div>
         <div class="jn-grid">
-          {{ jn('beschikbaar_maandag',    'Maandag') }}
+          {{ jn('beschikbaar_maandag', 'Maandag') }}
+          {% if taak.profiel != 'Accommodatie' %}
           {{ jn('beschikbaar_dinsdag',    'Dinsdag') }}
           {{ jn('beschikbaar_woensdag',   'Woensdag') }}
           {{ jn('beschikbaar_donderdag',  'Donderdag') }}
-          {{ jn('beschikbaar_vrijdag',    'Vrijdag') }}
+          {% endif %}
+          {{ jn('beschikbaar_vrijdag', 'Vrijdag') }}
+          {% if taak.profiel != 'Accommodatie' %}
           {{ jn('beschikbaar_zaterdag',   'Zaterdag') }}
           {{ jn('beschikbaar_zondag',     'Zondag') }}
           {{ jn('beschikbaar_overdag',    'Overdag') }}
           {{ jn('beschikbaar_avonden',    'Avonden') }}
           {{ jn('beschikbaar_structureel','Structureel') }}
+          {% endif %}
         </div>
       </div>
 
@@ -220,15 +224,36 @@
             </select>
           </div>
         </div>
+        {% if taak.profiel != 'Accommodatie' %}
         <div class="jn-grid" style="margin-top:.6rem">
           {{ jn('bereid_structureel',  'Bereid structurele taken uit te voeren') }}
           {{ jn('bereid_projectmatig', 'Bereid projectmatige ondersteuning te leveren') }}
         </div>
+        {% endif %}
       </div>
 
       {# ── Profielspecifieke secties ── #}
 
-      {% if taak.profiel == 'Horeca' %}
+      {% if taak.profiel == 'Accommodatie' %}
+
+        <!-- Ervaring & vaardigheden — Accommodatie -->
+        <div class="isec">
+          <div class="isec-head">Ervaring & vaardigheden</div>
+          <div class="jn-grid">
+            {{ jn('ervaring_schilderen',    'Schilderen') }}
+            {{ jn('ervaring_timmeren',      'Timmeren') }}
+            {{ jn('ervaring_lassen',        'Lassen') }}
+            {{ jn('ervaring_loodgieterswerk','Loodgieterswerk') }}
+            {{ jn('ervaring_elektra',       'Elektra/installatie') }}
+            {{ jn('ervaring_metselwerk',    'Metselwerk') }}
+            {{ jn('ervaring_vloerleggen',   'Vloerleggen') }}
+            {{ jn('ervaring_klussen',       'Klussen algemeen') }}
+            {{ jn('ervaring_tuinonderhoud', 'Tuinonderhoud') }}
+            {{ jn('ervaring_schoonmaak',    'Schoonmaak') }}
+          </div>
+        </div>
+
+      {% elif taak.profiel == 'Horeca' %}
 
         <!-- Rollen binnen Horeca -->
         <div class="isec">
