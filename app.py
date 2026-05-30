@@ -712,17 +712,32 @@ def index():
         return redirect(url_for('taken'))
     zoek = request.args.get('q', '').strip()
     conn = get_db()
+
+    taak_subquery = '''
+        LEFT JOIN (
+            SELECT vrijwilliger_id,
+                   COUNT(*) AS taken_totaal,
+                   SUM(CASE WHEN status = 'Voltooid'        THEN 1 ELSE 0 END) AS taken_voltooid,
+                   SUM(CASE WHEN status = 'In behandeling'  THEN 1 ELSE 0 END) AS taken_lopend,
+                   SUM(CASE WHEN status = 'Nieuw'           THEN 1 ELSE 0 END) AS taken_nieuw
+            FROM taken GROUP BY vrijwilliger_id
+        ) t ON t.vrijwilliger_id = v.id
+    '''
+
     if zoek:
         q = f'%{zoek}%'
         rows = conn.execute(
-            '''SELECT * FROM vrijwilligers
-               WHERE naam LIKE ? OR voornaam LIKE ? OR achternaam LIKE ?
-                  OR email LIKE ? OR profielen LIKE ? OR woonplaats LIKE ?
-               ORDER BY achternaam, voornaam, naam''', (q,q,q,q,q,q)
+            f'''SELECT v.*, t.taken_totaal, t.taken_voltooid, t.taken_lopend, t.taken_nieuw
+                FROM vrijwilligers v {taak_subquery}
+                WHERE v.naam LIKE ? OR v.voornaam LIKE ? OR v.achternaam LIKE ?
+                   OR v.email LIKE ? OR v.profielen LIKE ? OR v.woonplaats LIKE ?
+                ORDER BY v.achternaam, v.voornaam, v.naam''', (q,q,q,q,q,q)
         ).fetchall()
     else:
         rows = conn.execute(
-            'SELECT * FROM vrijwilligers ORDER BY achternaam, voornaam, naam'
+            f'''SELECT v.*, t.taken_totaal, t.taken_voltooid, t.taken_lopend, t.taken_nieuw
+                FROM vrijwilligers v {taak_subquery}
+                ORDER BY v.achternaam, v.voornaam, v.naam'''
         ).fetchall()
     conn.close()
     return render_template('index.html', vrijwilligers=rows, zoek=zoek)

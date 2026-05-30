@@ -31,6 +31,7 @@
             <th>Adres</th>
             <th>Contact</th>
             <th>Status</th>
+            <th>Intake</th>
             <th>Profielen</th>
             <th></th>
           </tr>
@@ -55,6 +56,24 @@
             <td>
               {% if v.status_vrijwilliger %}
               <span class="status-badge {{ v.status_vrijwilliger | lower }}">{{ v.status_vrijwilliger }}</span>
+              {% endif %}
+            </td>
+            <td>
+              {% set totaal  = v.taken_totaal  or 0 %}
+              {% set voltooid = v.taken_voltooid or 0 %}
+              {% set lopend  = v.taken_lopend  or 0 %}
+              {% if totaal == 0 %}
+                <span style="color:#94a3b8;font-size:.8rem">—</span>
+              {% elif voltooid == totaal %}
+                <span class="status-badge actief">{{ voltooid }}/{{ totaal }} voltooid</span>
+              {% elif lopend > 0 or voltooid > 0 %}
+                <span class="status-badge" style="background:#fef9c3;color:#854d0e">
+                  {{ voltooid }}/{{ totaal }} voltooid
+                </span>
+              {% else %}
+                <span class="status-badge" style="background:#dbeafe;color:#1e40af">
+                  {{ totaal }} nieuw
+                </span>
               {% endif %}
             </td>
             <td>
