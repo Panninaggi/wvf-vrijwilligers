@@ -41,7 +41,7 @@
           {% for v in vrijwilligers %}
           <tr>
             <td>
-              <div class="vname">{{ v | display_naam }}</div>
+              <a href="/vrijwilligers/{{ v.id }}" class="vname" style="color:#1A6CC4;text-decoration:none">{{ v | display_naam }}</a>
               {% if v.geboortedatum %}<div class="vsub">{{ v.geboortedatum }}</div>{% endif %}
             </td>
             <td>

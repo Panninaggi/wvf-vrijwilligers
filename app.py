@@ -808,6 +808,59 @@ def toevoegen():
     return redirect(url_for('index'))
 
 
+@app.route('/vrijwilligers/<int:vid>', methods=['GET'])
+@login_required
+@rol_vereist('beheerder')
+def vrijwilliger_detail(vid):
+    conn = get_db()
+    v = conn.execute('SELECT * FROM vrijwilligers WHERE id = ?', (vid,)).fetchone()
+    profielen_rows = conn.execute('SELECT naam FROM profielen ORDER BY naam').fetchall()
+    conn.close()
+    if not v:
+        flash('Vrijwilliger niet gevonden.', 'error')
+        return redirect(url_for('index'))
+    return render_template('vrijwilliger_detail.html',
+                           v=v,
+                           profielen_clusters=cluster_profielen(profielen_rows))
+
+
+@app.route('/vrijwilligers/<int:vid>', methods=['POST'])
+@login_required
+@rol_vereist('beheerder')
+def vrijwilliger_opslaan(vid):
+    voornaam = request.form.get('voornaam', '').strip()
+    tussenvoegsel = request.form.get('tussenvoegsel', '').strip()
+    achternaam = request.form.get('achternaam', '').strip()
+    naam = ' '.join(p for p in [voornaam, tussenvoegsel, achternaam] if p)
+    if not naam:
+        flash('Voornaam en achternaam zijn verplicht.', 'error')
+        return redirect(url_for('vrijwilliger_detail', vid=vid))
+
+    list_fields = {'profielen'}
+    data = {}
+    for key in request.form:
+        if key in list_fields:
+            data[key] = '||'.join(request.form.getlist(key))
+        else:
+            data[key] = request.form.get(key, '').strip()
+
+    conn = get_db()
+    conn.execute('''UPDATE vrijwilligers SET
+        naam=:naam, voornaam=:voornaam, tussenvoegsel=:tussenvoegsel, achternaam=:achternaam,
+        adres=:adres, postcode=:postcode, woonplaats=:woonplaats, geboortedatum=:geboortedatum,
+        email=:email, telefoonnummer=:telefoonnummer, knvb_lid=:knvb_lid,
+        relatienummer=:relatienummer, ouder_verzorger=:ouder_verzorger,
+        naam_kind=:naam_kind, team_kind=:team_kind, eigen_bedrijf=:eigen_bedrijf,
+        sponsor_interesse=:sponsor_interesse, vriend_wvf=:vriend_wvf,
+        avg_toestemming=:avg_toestemming, opmerkingen=:opmerkingen,
+        status_vrijwilliger=:status_vrijwilliger, profielen=:profielen
+        WHERE id=:id''', {**data, 'naam': naam, 'id': vid})
+    conn.commit()
+    conn.close()
+    flash('Gegevens opgeslagen.', 'success')
+    return redirect(url_for('vrijwilliger_detail', vid=vid))
+
+
 @app.route('/archiveren/<int:vid>', methods=['POST'])
 @login_required
 @rol_vereist('beheerder')
