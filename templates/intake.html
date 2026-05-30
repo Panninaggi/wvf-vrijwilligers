@@ -192,22 +192,33 @@
       <!-- Beschikbaarheid & inzet -->
       <div class="isec">
         <div class="isec-head">Beschikbaarheid & inzet</div>
+        {% if taak.profiel == 'Horeca' %}
+        <div class="jn-grid">
+          {{ jn('beschikbaar_donderdagavond', 'Donderdagavond') }}
+          {{ jn('beschikbaar_vrijdagavond',   'Vrijdagavond') }}
+          {{ jn('beschikbaar_zaterdag_v',     'Zaterdag V  08:00–12:00') }}
+          {{ jn('beschikbaar_zaterdag_m',     'Zaterdag M  12:00–16:00') }}
+          {{ jn('beschikbaar_zaterdag_l',     'Zaterdag L  16:00–20:00') }}
+        </div>
+        {% elif taak.profiel == 'Accommodatie' %}
         <div class="jn-grid">
           {{ jn('beschikbaar_maandag', 'Maandag') }}
-          {% if taak.profiel != 'Accommodatie' %}
+          {{ jn('beschikbaar_vrijdag', 'Vrijdag') }}
+        </div>
+        {% else %}
+        <div class="jn-grid">
+          {{ jn('beschikbaar_maandag',    'Maandag') }}
           {{ jn('beschikbaar_dinsdag',    'Dinsdag') }}
           {{ jn('beschikbaar_woensdag',   'Woensdag') }}
           {{ jn('beschikbaar_donderdag',  'Donderdag') }}
-          {% endif %}
-          {{ jn('beschikbaar_vrijdag', 'Vrijdag') }}
-          {% if taak.profiel != 'Accommodatie' %}
+          {{ jn('beschikbaar_vrijdag',    'Vrijdag') }}
           {{ jn('beschikbaar_zaterdag',   'Zaterdag') }}
           {{ jn('beschikbaar_zondag',     'Zondag') }}
           {{ jn('beschikbaar_overdag',    'Overdag') }}
           {{ jn('beschikbaar_avonden',    'Avonden') }}
           {{ jn('beschikbaar_structureel','Structureel') }}
-          {% endif %}
         </div>
+        {% endif %}
       </div>
 
       <!-- Frequentie inzet -->
@@ -224,7 +235,7 @@
             </select>
           </div>
         </div>
-        {% if taak.profiel != 'Accommodatie' %}
+        {% if taak.profiel not in ['Accommodatie', 'Horeca'] %}
         <div class="jn-grid" style="margin-top:.6rem">
           {{ jn('bereid_structureel',  'Bereid structurele taken uit te voeren') }}
           {{ jn('bereid_projectmatig', 'Bereid projectmatige ondersteuning te leveren') }}
@@ -321,7 +332,7 @@
               <label>Voorkeur locatie</label>
               <select name="voorkeur_locatie">
                 <option value="">—</option>
-                {% for opt in ['Kantine','Keuken','Evenementen','Geen voorkeur'] %}
+                {% for opt in ['Kantine','Keuken','Evenementen','Terras','Bestuurskamer','Geen voorkeur'] %}
                 <option value="{{ opt }}" {{ 'selected' if data.get('voorkeur_locatie') == opt }}>{{ opt }}</option>
                 {% endfor %}
               </select>
