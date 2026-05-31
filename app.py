@@ -230,7 +230,10 @@ def init_db():
     for col, typ in [('tussenvoegsel','TEXT'),('gebruiker_id','INTEGER')]:
         conn.add_col('eigenaren', col, typ)
 
-    for col, typ in [('vog_nodig','TEXT'),('gedragscode_vereist','TEXT'),('avg_akkoord_vereist','TEXT')]:
+    for col, typ in [
+        ('vog_nodig','TEXT'),('gedragscode_vereist','TEXT'),('avg_akkoord_vereist','TEXT'),
+        ('tweede_eigenaar_id','INTEGER'),('tweede_eigenaar_actief','INTEGER'),
+    ]:
         conn.add_col('profielen', col, typ)
 
     if conn.scalar('SELECT COUNT(*) FROM profielen') == 0:
@@ -670,11 +673,15 @@ def registreren_post():
     # Taak + email per profiel
     for profiel_naam in geselecteerde_profielen:
         profiel_row = conn.execute('''
-            SELECT p.id, p.eigenaar_id, e.email AS eigenaar_email,
-                   e.voornaam || COALESCE(' '||NULLIF(e.tussenvoegsel,''),'')
-                   ||' '||e.achternaam AS eigenaar_naam
+            SELECT p.id, p.eigenaar_id,
+                   p.tweede_eigenaar_id, p.tweede_eigenaar_actief,
+                   e.email  AS eigenaar_email,
+                   e.voornaam||COALESCE(' '||NULLIF(e.tussenvoegsel,''),'')||' '||e.achternaam AS eigenaar_naam,
+                   e2.email AS tweede_email,
+                   e2.voornaam||COALESCE(' '||NULLIF(e2.tussenvoegsel,''),'')||' '||e2.achternaam AS tweede_naam
             FROM profielen p
-            LEFT JOIN eigenaren e ON p.eigenaar_id = e.id
+            LEFT JOIN eigenaren e  ON p.eigenaar_id        = e.id
+            LEFT JOIN eigenaren e2 ON p.tweede_eigenaar_id = e2.id
             WHERE p.naam = ?
         ''', (profiel_naam,)).fetchone()
 
@@ -688,6 +695,14 @@ def registreren_post():
             email_eigenaar_notificatie(
                 profiel_row['eigenaar_email'],
                 profiel_row['eigenaar_naam'],
+                naam, profiel_naam, taak_id
+            )
+
+        # Tweede bevoegde — alleen als actief
+        if profiel_row and profiel_row['tweede_eigenaar_actief'] and profiel_row['tweede_email']:
+            email_eigenaar_notificatie(
+                profiel_row['tweede_email'],
+                profiel_row['tweede_naam'],
                 naam, profiel_naam, taak_id
             )
 
@@ -1329,8 +1344,14 @@ def profielen_beheer():
     profielen = conn.execute('''
         SELECT p.id, p.naam, p.eigenaar_id,
                p.vog_nodig, p.gedragscode_vereist, p.avg_akkoord_vereist,
-               e.voornaam||COALESCE(' '||NULLIF(e.tussenvoegsel,''),'')||' '||COALESCE(e.achternaam,'') AS eigenaar_naam
-        FROM profielen p LEFT JOIN eigenaren e ON p.eigenaar_id = e.id ORDER BY p.naam
+               p.tweede_eigenaar_id, p.tweede_eigenaar_actief,
+               e.voornaam||COALESCE(' '||NULLIF(e.tussenvoegsel,''),'')||' '||COALESCE(e.achternaam,'') AS eigenaar_naam,
+               e2.voornaam||COALESCE(' '||NULLIF(e2.tussenvoegsel,''),'')||' '||COALESCE(e2.achternaam,'') AS tweede_eigenaar_naam,
+               e2.email AS tweede_eigenaar_email
+        FROM profielen p
+        LEFT JOIN eigenaren e  ON p.eigenaar_id         = e.id
+        LEFT JOIN eigenaren e2 ON p.tweede_eigenaar_id  = e2.id
+        ORDER BY p.naam
     ''').fetchall()
     eigenaren = conn.execute('SELECT * FROM eigenaren ORDER BY achternaam, voornaam').fetchall()
     conn.close()
@@ -1383,6 +1404,23 @@ def profiel_vog(pid):
     conn.commit()
     conn.close()
     flash('VOG-instellingen opgeslagen.', 'success')
+    return redirect(url_for('profielen_beheer'))
+
+
+@app.route('/beheer/profielen/tweede-eigenaar/<int:pid>', methods=['POST'])
+@login_required
+@rol_vereist('beheerder')
+def profiel_tweede_eigenaar(pid):
+    tweede_id = request.form.get('tweede_eigenaar_id') or None
+    actief = 1 if request.form.get('tweede_eigenaar_actief') else 0
+    conn = get_db()
+    conn.execute(
+        'UPDATE profielen SET tweede_eigenaar_id=?, tweede_eigenaar_actief=? WHERE id=?',
+        (tweede_id, actief, pid)
+    )
+    conn.commit()
+    conn.close()
+    flash('Tweede bevoegde opgeslagen.', 'success')
     return redirect(url_for('profielen_beheer'))
 
 
