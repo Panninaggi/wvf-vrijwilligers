@@ -200,7 +200,7 @@
         </div>
       </div>
 
-      {% if taak.profiel != 'Voetbalontwikkeling' %}
+      {% if taak.profiel not in ['Voetbalontwikkeling', 'Financiën'] %}
       <!-- Beschikbaarheid & inzet -->
       <div class="isec">
         <div class="isec-head">Beschikbaarheid & inzet</div>
@@ -278,7 +278,7 @@
         </div>
         {% endif %}
       </div>
-      {% endif %}{# einde: niet Voetbalontwikkeling #}
+      {% endif %}{# einde: niet Voetbalontwikkeling/Financiën #}
 
       {# ── Profielspecifieke secties ── #}
 
@@ -688,6 +688,98 @@
                 {% endfor %}
               </select>
             </div>
+          </div>
+        </div>
+
+      {% elif taak.profiel == 'Financiën' %}
+
+        <!-- Rollen binnen Financiën -->
+        <div class="isec">
+          <div class="isec-head">
+            Rollen binnen Financiën
+            <span style="font-size:.7rem;font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;opacity:.7;margin-left:.5rem">meerdere selecties mogelijk</span>
+          </div>
+          <div class="mc-grid">
+            {% for rol in [
+              'Penningmeester',
+              'Assistent-penningmeester',
+              'Financieel administrateur',
+              'Contributiebeheer',
+              'Facturatie & betalingen',
+              'Begroting & rapportage',
+              'Kascontrolecommissie',
+              'Kantine financieel beheer',
+              'Sponsoring & fondsenwerving',
+              'Subsidieadministratie',
+            ] %}
+            <label class="mc-item">
+              <input type="checkbox" name="rollen_profiel" value="{{ rol }}"
+                     {{ 'checked' if rol in (data.get('rollen_profiel') or []) }}>
+              {{ rol }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Ervaring & vaardigheden — Financiën -->
+        <div class="isec">
+          <div class="isec-head">Ervaring & vaardigheden</div>
+          <div class="jn-grid">
+            {{ jn('ervaring_financieel',     'Financiële ervaring') }}
+            {{ jn('ervaring_administratief', 'Administratieve ervaring') }}
+            {{ jn('ervaring_boekhouding',    'Ervaring boekhouding') }}
+            {{ jn('ervaring_begrotingen',    'Ervaring begrotingen') }}
+            {{ jn('nauwkeurig_werken',       'Nauwkeurig werken') }}
+            {{ jn('analytisch_sterk',        'Analytisch sterk') }}
+            {{ jn('organisatorisch_sterk',   'Organisatorisch sterk') }}
+            {{ jn('communicatief_vaardig',   'Communicatief vaardig') }}
+          </div>
+        </div>
+
+        <!-- Digitale vaardigheden — Financiën -->
+        <div class="isec">
+          <div class="isec-head">Digitale vaardigheden</div>
+          <div class="jn-grid">
+            {{ jn('ervaring_excel',              'Excel') }}
+            {{ jn('ervaring_boekhoud_software',  'Boekhoudssoftware') }}
+            {{ jn('ervaring_sportlink',          'Sportlink') }}
+            {{ jn('ervaring_rapportages',        'Rapportages/dashboards') }}
+            {{ jn('ervaring_online_bankieren',   'Online bankieren') }}
+          </div>
+        </div>
+
+        <!-- Voorkeuren — Financiën -->
+        <div class="isec">
+          <div class="isec-head">Voorkeuren</div>
+          <div class="ifield" style="margin-bottom:.75rem">
+            <label>Voorkeur werkzaamheden</label>
+            <div class="mc-grid" style="margin-top:.4rem">
+              {% for opt in ['Administratie','Controle','Facturatie','Contributies','Begroting','Sponsoring','Rapportage','Subsidie'] %}
+              <label class="mc-item">
+                <input type="checkbox" name="voorkeur_werkzaamheden" value="{{ opt }}"
+                       {{ 'checked' if opt in (data.get('voorkeur_werkzaamheden') or []) }}>
+                {{ opt }}
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="irow2">
+            <div class="ifield">
+              <label>Voorkeur zelfstandig/team</label>
+              <select name="voorkeur_team">
+                <option value="">—</option>
+                {% for opt in ['Zelfstandig','In team','Geen voorkeur'] %}
+                <option value="{{ opt }}" {{ 'selected' if data.get('voorkeur_team') == opt }}>{{ opt }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="ifield">
+              <label>Taken liever vermijden</label>
+              <input type="text" name="taken_vermijden" placeholder="…" value="{{ data.get('taken_vermijden','') }}">
+            </div>
+          </div>
+          <div class="jn-grid c1" style="margin-top:.6rem">
+            {{ jn('interesse_coordinatie', 'Interesse coördinerende rol') }}
           </div>
         </div>
 
