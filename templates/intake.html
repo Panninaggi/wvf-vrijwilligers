@@ -200,6 +200,7 @@
         </div>
       </div>
 
+      {% if taak.profiel != 'Voetbalontwikkeling' %}
       <!-- Beschikbaarheid & inzet -->
       <div class="isec">
         <div class="isec-head">Beschikbaarheid & inzet</div>
@@ -277,10 +278,113 @@
         </div>
         {% endif %}
       </div>
+      {% endif %}{# einde: niet Voetbalontwikkeling #}
 
       {# ── Profielspecifieke secties ── #}
 
-      {% if taak.profiel == 'Gastvrijheid & Ontvangst' %}
+      {% if taak.profiel == 'Voetbalontwikkeling' %}
+
+        <!-- Rollen binnen Voetbalontwikkeling -->
+        <div class="isec">
+          <div class="isec-head">
+            Rollen binnen Voetbalontwikkeling
+            <span style="font-size:.7rem;font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;opacity:.7;margin-left:.5rem">meerdere selecties mogelijk</span>
+          </div>
+          <div class="mc-grid">
+            {% for rol in [
+              'Voorzitter technische commissie',
+              'Technisch coördinator selectie senioren',
+              'Technisch coördinator bovenbouw',
+              'Technisch coördinator middenbouw',
+              'Technisch coördinator onderbouw',
+              'Talentenbegeleider',
+              'Keeperstrainer',
+              'Conditietrainer',
+              'Spelersanalist',
+              'Scout',
+              'Technisch adviseur',
+            ] %}
+            <label class="mc-item">
+              <input type="checkbox" name="rollen_profiel" value="{{ rol }}"
+                     {{ 'checked' if rol in (data.get('rollen_profiel') or []) }}>
+              {{ rol }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Ervaring & vaardigheden — Voetbalontwikkeling -->
+        <div class="isec">
+          <div class="isec-head">Ervaring & vaardigheden</div>
+          <div class="jn-grid">
+            {{ jn('ervaring_voetbalcoaching',   'Ervaring voetbalcoaching') }}
+            {{ jn('ervaring_technisch_beleid',  'Ervaring technisch beleid') }}
+            {{ jn('ervaring_coordineren',       'Ervaring technisch coördineren') }}
+            {{ jn('ervaring_jeugdontwikkeling', 'Ervaring jeugdontwikkeling') }}
+            {{ jn('ervaring_seniorenselectie',  'Ervaring seniorenselectie') }}
+            {{ jn('ervaring_spelersanalyse',    'Ervaring spelersanalyse') }}
+            {{ jn('ervaring_scouting',          'Ervaring scouting') }}
+            {{ jn('ervaring_keeperstraining',   'Ervaring keeperstraining') }}
+            {{ jn('ervaring_conditietraining',  'Ervaring conditietraining') }}
+            {{ jn('analytisch_sterk',           'Analytisch sterk') }}
+            {{ jn('communicatief_vaardig',      'Communicatief vaardig') }}
+            {{ jn('organisatorisch_sterk',      'Organisatorisch sterk') }}
+          </div>
+        </div>
+
+        <!-- Trainersdiploma's -->
+        <div class="isec">
+          <div class="isec-head">
+            Trainersdiploma's
+            <span style="font-size:.7rem;font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;opacity:.7;margin-left:.5rem">meerdere selecties mogelijk</span>
+          </div>
+          <div class="mc-grid">
+            {% for d in ['UEFA C','UEFA B','UEFA A','UEFA Pro','KNVB Jeugd Opleider A','KNVB Jeugd Opleider B','Keeperstrainer licentie','Geen diploma'] %}
+            <label class="mc-item">
+              <input type="checkbox" name="trainers_diploma" value="{{ d }}"
+                     {{ 'checked' if d in (data.get('trainers_diploma') or []) }}>
+              {{ d }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Voorkeuren — Voetbalontwikkeling -->
+        <div class="isec">
+          <div class="isec-head">Voorkeuren</div>
+          <div class="ifield" style="margin-bottom:.75rem">
+            <label>Voorkeur werkzaamheden</label>
+            <div class="mc-grid" style="margin-top:.4rem">
+              {% for opt in ['Coaching','Technisch beleid','Scouting','Spelersanalyse','Coördinatie','Keeperstraining','Conditietraining','Talentontwikkeling'] %}
+              <label class="mc-item">
+                <input type="checkbox" name="voorkeur_werkzaamheden" value="{{ opt }}"
+                       {{ 'checked' if opt in (data.get('voorkeur_werkzaamheden') or []) }}>
+                {{ opt }}
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="irow2">
+            <div class="ifield">
+              <label>Voorkeur categorie</label>
+              <select name="voorkeur_categorie">
+                <option value="">—</option>
+                {% for opt in ['Senioren selectie','Bovenbouw (JO15–JO19)','Middenbouw (JO11–JO14)','Onderbouw (JO7–JO10)','Alle categorieën','Geen voorkeur'] %}
+                <option value="{{ opt }}" {{ 'selected' if data.get('voorkeur_categorie') == opt }}>{{ opt }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="ifield">
+              <label>Taken liever vermijden</label>
+              <input type="text" name="taken_vermijden" placeholder="…" value="{{ data.get('taken_vermijden','') }}">
+            </div>
+          </div>
+          <div class="jn-grid c1" style="margin-top:.6rem">
+            {{ jn('interesse_coordinatie', 'Interesse coördinerende rol') }}
+          </div>
+        </div>
+
+      {% elif taak.profiel == 'Gastvrijheid & Ontvangst' %}
 
         <!-- Voorkeur samenstelling -->
         <div class="isec">
