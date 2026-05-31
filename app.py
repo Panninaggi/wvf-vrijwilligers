@@ -825,14 +825,18 @@ def toevoegen():
         'profielen': '||'.join(request.form.getlist('profielen')),
     })
 
-    # Taken aanmaken per profiel (zelfde logica als registreren)
+    # Taken aanmaken per profiel — eigenaar ophalen uit profieltabel
     vw_id = conn.scalar('SELECT id FROM vrijwilligers WHERE naam=? ORDER BY id DESC LIMIT 1', (naam,))
     geselecteerde_profielen = request.form.getlist('profielen')
     eerste_taak_id = None
     for profiel_naam in geselecteerde_profielen:
+        profiel_row = conn.execute(
+            'SELECT eigenaar_id FROM profielen WHERE naam=?', (profiel_naam,)
+        ).fetchone()
+        eigenaar_id = profiel_row['eigenaar_id'] if profiel_row else None
         taak_id = conn.insert(
             'INSERT INTO taken (vrijwilliger_id, eigenaar_id, profiel, type, status) VALUES (?,?,?,?,?)',
-            (vw_id, None, profiel_naam, 'intake', 'Nieuw')
+            (vw_id, eigenaar_id, profiel_naam, 'intake', 'Nieuw')
         )
         if eerste_taak_id is None:
             eerste_taak_id = taak_id
