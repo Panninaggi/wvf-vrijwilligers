@@ -3,23 +3,65 @@
 
 {% block head %}
 <style>
-  .vog-badge { font-size:.72rem;font-weight:600;padding:.15rem .45rem;border-radius:4px;white-space:nowrap; }
+  /* ── Inline eigenaar-cel ── */
+  .ec-form { display:flex; flex-direction:column; gap:.3rem; }
+  .ec-row  { display:flex; align-items:center; gap:.4rem; }
+  .ec-sel  {
+    flex:1; min-width:0; padding:.28rem .5rem;
+    border:1.5px solid #cbd5e1; border-radius:5px;
+    font-size:.83rem; color:#1e293b; background:#fff;
+  }
+  .ec-sel:focus { outline:none; border-color:#1A6CC4; }
+  .ec-actief {
+    display:flex; align-items:center; gap:.3rem;
+    font-size:.8rem; color:#475569; cursor:pointer; white-space:nowrap;
+  }
+  .ec-actief input { accent-color:#1A6CC4; width:14px; height:14px; }
+  .ec-badge {
+    display:inline-block; font-size:.72rem; font-weight:600;
+    padding:.12rem .45rem; border-radius:4px; white-space:nowrap;
+  }
+  .ec-badge.aan  { background:#dcfce7; color:#166534; border:1px solid #bbf7d0; }
+  .ec-badge.uit  { background:#f1f5f9; color:#94a3b8; border:1px solid #e2e8f0; }
+
+  /* ── VOG ── */
+  .vog-badge { font-size:.72rem;font-weight:600;padding:.12rem .42rem;border-radius:4px;white-space:nowrap; }
   .vog-badge.ja  { background:#dcfce7;color:#166534;border:1px solid #bbf7d0; }
   .vog-badge.nee { background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0; }
   details.vog-details summary {
-    cursor:pointer;font-size:.8rem;color:#1A6CC4;font-weight:600;
-    list-style:none;display:flex;align-items:center;gap:.3rem;
+    cursor:pointer; font-size:.8rem; color:#1A6CC4; font-weight:600;
+    list-style:none; display:flex; align-items:center; gap:.3rem;
   }
-  details.vog-details summary::after { content:'▾';font-size:.7rem;transition:transform .2s; }
+  details.vog-details summary::after { content:'▾'; font-size:.7rem; transition:transform .2s; }
   details.vog-details[open] summary::after { transform:rotate(180deg); }
   details.vog-details summary::-webkit-details-marker { display:none; }
-  .vog-form { margin-top:.6rem;display:flex;flex-direction:column;gap:.4rem; }
-  .vog-row { display:flex;align-items:center;justify-content:space-between;gap:.75rem;
-             font-size:.83rem;background:#f8fafc;border:1px solid #e2e8f0;
-             border-radius:5px;padding:.35rem .65rem; }
-  .vog-row label { color:#475569;flex:1; }
-  .vog-sel { padding:.2rem .4rem;border:1px solid #cbd5e1;border-radius:4px;
-             font-size:.82rem;background:#fff;min-width:64px; }
+  .vog-form { margin-top:.5rem; display:flex; flex-direction:column; gap:.35rem; }
+  .vog-row  {
+    display:flex; align-items:center; justify-content:space-between; gap:.5rem;
+    font-size:.82rem; background:#f8fafc; border:1px solid #e2e8f0;
+    border-radius:5px; padding:.3rem .6rem;
+  }
+  .vog-row label { color:#475569; flex:1; }
+  .vog-sel { padding:.2rem .4rem; border:1px solid #cbd5e1; border-radius:4px; font-size:.82rem; background:#fff; min-width:60px; }
+
+  /* ── Tabel ── */
+  table { table-layout:fixed; }
+  table th:nth-child(1) { width:14%; }
+  table th:nth-child(2) { width:22%; }
+  table th:nth-child(3) { width:24%; }
+  table th:nth-child(4) { width:34%; }
+  table th:nth-child(5) { width:6%; }
+  tbody td { vertical-align:top; padding:.65rem .75rem; }
+
+  /* ── Toevoegen-balk ── */
+  .add-bar {
+    display:flex; gap:.75rem; align-items:flex-end;
+    background:#f8fafc; border:1px solid #e2e8f0;
+    border-radius:8px; padding:.85rem 1rem; margin-bottom:1.25rem; flex-wrap:wrap;
+  }
+  .add-bar .field { margin:0; flex:1; min-width:140px; }
+  .add-bar .field label { font-size:.73rem; }
+  .add-bar .btn-primary { width:auto; padding:.5rem 1.1rem; margin:0; flex-shrink:0; align-self:flex-end; }
 </style>
 {% endblock %}
 
@@ -31,176 +73,159 @@
     <span>Profielen</span>
   </div>
 
-  <div class="two-col">
+  <div class="card">
+    <div class="card-title">Profielen</div>
 
-    <!-- Formulier -->
-    <div class="card">
-      <div class="card-title">Profiel toevoegen</div>
-      <form method="POST" action="/beheer/profielen/toevoegen">
+    <!-- Profiel toevoegen (compacte balk) -->
+    <form method="POST" action="/beheer/profielen/toevoegen">
+      <div class="add-bar">
         <div class="field">
-          <label for="naam">Naam <span style="color:#dc2626">*</span></label>
-          <input type="text" id="naam" name="naam" required placeholder="Naam van het profiel" autocomplete="off">
+          <label>Naam <span style="color:#dc2626">*</span></label>
+          <input type="text" name="naam" required placeholder="Naam van het profiel" autocomplete="off">
         </div>
         <div class="field">
-          <label for="eigenaar_id">Eigenaar</label>
-          <select id="eigenaar_id" name="eigenaar_id">
+          <label>Eigenaar</label>
+          <select name="eigenaar_id">
             <option value="">— geen eigenaar —</option>
             {% for e in eigenaren %}
             <option value="{{ e.id }}">{{ e.voornaam }}{% if e.tussenvoegsel %} {{ e.tussenvoegsel }}{% endif %} {{ e.achternaam }}</option>
             {% endfor %}
           </select>
         </div>
-        <button type="submit" class="btn-primary">Opslaan</button>
-      </form>
+        <button type="submit" class="btn-primary">+ Toevoegen</button>
+      </div>
+    </form>
 
-      {% if not eigenaren %}
-      <p style="margin-top:1rem;font-size:.82rem;color:#94a3b8">
-        Er zijn nog geen eigenaren geregistreerd.
-        <a href="/beheer/eigenaren" style="color:#1A6CC4">Eigenaren beheren →</a>
-      </p>
-      {% endif %}
-    </div>
+    <p class="count-label">{{ profielen|length }} profiel(en) geregistreerd</p>
 
-    <!-- Lijst -->
-    <div class="card">
-      <div class="card-title">Profielen</div>
-      <p class="count-label">{{ profielen|length }} profiel(en) geregistreerd</p>
+    {% if profielen %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Naam</th>
+            <th>Eigenaar</th>
+            <th>Tweede bevoegde</th>
+            <th>VOG & veiligheid</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in profielen %}
+          <tr>
 
-      {% if profielen %}
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Naam</th>
-              <th>Eigenaar</th>
-              <th>Tweede bevoegde</th>
-              <th>VOG & veiligheid</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for p in profielen %}
-            <tr>
-              <td><div class="vname">{{ p.naam }}</div></td>
+            <!-- Naam -->
+            <td><div class="vname">{{ p.naam }}</div></td>
 
-              <td>
-                <form method="POST" action="/beheer/profielen/eigenaar/{{ p.id }}">
-                  <div class="eigenaar-row">
-                    <select name="eigenaar_id" class="select-inline">
-                      <option value="">— geen —</option>
-                      {% for e in eigenaren %}
-                      <option value="{{ e.id }}" {{ 'selected' if p.eigenaar_id == e.id else '' }}>
-                        {{ e.voornaam }}{% if e.tussenvoegsel %} {{ e.tussenvoegsel }}{% endif %} {{ e.achternaam }}
-                      </option>
-                      {% endfor %}
-                    </select>
-                    <button type="submit" class="btn-save-sm">Opslaan</button>
-                  </div>
-                </form>
-              </td>
+            <!-- Eigenaar -->
+            <td>
+              <form method="POST" action="/beheer/profielen/eigenaar/{{ p.id }}" class="ec-form">
+                <div class="ec-row">
+                  <select name="eigenaar_id" class="ec-sel">
+                    <option value="">— geen —</option>
+                    {% for e in eigenaren %}
+                    <option value="{{ e.id }}" {{ 'selected' if p.eigenaar_id == e.id }}>
+                      {{ e.voornaam }}{% if e.tussenvoegsel %} {{ e.tussenvoegsel }}{% endif %} {{ e.achternaam }}
+                    </option>
+                    {% endfor %}
+                  </select>
+                  <button type="submit" class="btn-save-sm">Opslaan</button>
+                </div>
+              </form>
+            </td>
 
-              <!-- Tweede bevoegde -->
-              <td>
-                <form method="POST" action="/beheer/profielen/tweede-eigenaar/{{ p.id }}">
-                  <div class="eigenaar-row" style="flex-wrap:wrap;gap:.4rem">
-                    <select name="tweede_eigenaar_id" class="select-inline">
-                      <option value="">— geen —</option>
-                      {% for e in eigenaren %}
-                      <option value="{{ e.id }}" {{ 'selected' if p.tweede_eigenaar_id == e.id else '' }}>
-                        {{ e.voornaam }}{% if e.tussenvoegsel %} {{ e.tussenvoegsel }}{% endif %} {{ e.achternaam }}
-                      </option>
-                      {% endfor %}
-                    </select>
-                    {% if p.tweede_eigenaar_id %}
-                    <label style="display:flex;align-items:center;gap:.3rem;font-size:.82rem;cursor:pointer;white-space:nowrap">
-                      <input type="checkbox" name="tweede_eigenaar_actief" value="1"
-                             {{ 'checked' if p.tweede_eigenaar_actief }}
-                             style="accent-color:#1A6CC4;width:14px;height:14px">
-                      Actief
-                    </label>
-                    {% endif %}
-                    <button type="submit" class="btn-save-sm">Opslaan</button>
-                  </div>
-                  {% if p.tweede_eigenaar_id %}
-                  <div style="margin-top:.3rem">
-                    {% if p.tweede_eigenaar_actief %}
-                    <span style="font-size:.73rem;background:#dcfce7;color:#166534;padding:.1rem .4rem;border-radius:4px;border:1px solid #bbf7d0">Ontvangt notificaties</span>
-                    {% else %}
-                    <span style="font-size:.73rem;background:#f1f5f9;color:#94a3b8;padding:.1rem .4rem;border-radius:4px">Uitgeschakeld</span>
-                    {% endif %}
-                  </div>
-                  {% endif %}
-                </form>
-              </td>
-
-              <td>
-                <!-- Samenvatting als badges -->
-                <div style="display:flex;flex-wrap:wrap;gap:.25rem;margin-bottom:.4rem">
-                  {% if p.vog_nodig == 'Ja' %}
-                  <span class="vog-badge ja">VOG vereist</span>
-                  {% endif %}
-                  {% if p.gedragscode_vereist == 'Ja' %}
-                  <span class="vog-badge ja">Gedragscode</span>
-                  {% endif %}
-                  {% if p.avg_akkoord_vereist == 'Ja' %}
-                  <span class="vog-badge ja">AVG</span>
-                  {% endif %}
-                  {% if not p.vog_nodig and not p.gedragscode_vereist and not p.avg_akkoord_vereist %}
-                  <span class="vog-badge nee">Niet ingesteld</span>
+            <!-- Tweede bevoegde -->
+            <td>
+              <form method="POST" action="/beheer/profielen/tweede-eigenaar/{{ p.id }}" class="ec-form">
+                <div class="ec-row">
+                  <select name="tweede_eigenaar_id" class="ec-sel">
+                    <option value="">— geen —</option>
+                    {% for e in eigenaren %}
+                    <option value="{{ e.id }}" {{ 'selected' if p.tweede_eigenaar_id == e.id }}>
+                      {{ e.voornaam }}{% if e.tussenvoegsel %} {{ e.tussenvoegsel }}{% endif %} {{ e.achternaam }}
+                    </option>
+                    {% endfor %}
+                  </select>
+                  <button type="submit" class="btn-save-sm">Opslaan</button>
+                </div>
+                {% if p.tweede_eigenaar_id %}
+                <div class="ec-row">
+                  <label class="ec-actief">
+                    <input type="checkbox" name="tweede_eigenaar_actief" value="1"
+                           {{ 'checked' if p.tweede_eigenaar_actief }}
+                           onchange="this.form.submit()">
+                    Actief
+                  </label>
+                  {% if p.tweede_eigenaar_actief %}
+                  <span class="ec-badge aan">Ontvangt notificaties</span>
+                  {% else %}
+                  <span class="ec-badge uit">Uitgeschakeld</span>
                   {% endif %}
                 </div>
+                {% endif %}
+              </form>
+            </td>
 
-                <!-- Uitklapbaar formulier -->
-                <details class="vog-details">
-                  <summary>Instellen</summary>
-                  <form method="POST" action="/beheer/profielen/vog/{{ p.id }}" class="vog-form">
-                    <div class="vog-row">
-                      <label>VOG nodig</label>
-                      <select name="vog_nodig" class="vog-sel">
-                        <option value="">—</option>
-                        <option value="Ja"  {{ 'selected' if p.vog_nodig == 'Ja'  }}>Ja</option>
-                        <option value="Nee" {{ 'selected' if p.vog_nodig == 'Nee' }}>Nee</option>
-                      </select>
-                    </div>
-                    <div class="vog-row">
-                      <label>Gedragscode vereist</label>
-                      <select name="gedragscode_vereist" class="vog-sel">
-                        <option value="">—</option>
-                        <option value="Ja"  {{ 'selected' if p.gedragscode_vereist == 'Ja'  }}>Ja</option>
-                        <option value="Nee" {{ 'selected' if p.gedragscode_vereist == 'Nee' }}>Nee</option>
-                      </select>
-                    </div>
-                    <div class="vog-row">
-                      <label>AVG/Vertrouwelijkheid vereist</label>
-                      <select name="avg_akkoord_vereist" class="vog-sel">
-                        <option value="">—</option>
-                        <option value="Ja"  {{ 'selected' if p.avg_akkoord_vereist == 'Ja'  }}>Ja</option>
-                        <option value="Nee" {{ 'selected' if p.avg_akkoord_vereist == 'Nee' }}>Nee</option>
-                      </select>
-                    </div>
-                    <div style="display:flex;justify-content:flex-end;margin-top:.2rem">
-                      <button type="submit" class="btn-save-sm">Opslaan</button>
-                    </div>
-                  </form>
-                </details>
-              </td>
-
-              <td>
-                <form method="POST" action="/beheer/profielen/verwijderen/{{ p.id }}"
-                      onsubmit="return confirm('Profiel {{ p.naam }} verwijderen?')">
-                  <button type="submit" class="btn-del" title="Verwijderen">✕</button>
+            <!-- VOG & veiligheid -->
+            <td>
+              <div style="display:flex;flex-wrap:wrap;gap:.25rem;margin-bottom:.35rem">
+                {% if p.vog_nodig == 'Ja' %}<span class="vog-badge ja">VOG</span>{% endif %}
+                {% if p.gedragscode_vereist == 'Ja' %}<span class="vog-badge ja">Gedragscode</span>{% endif %}
+                {% if p.avg_akkoord_vereist == 'Ja' %}<span class="vog-badge ja">AVG</span>{% endif %}
+                {% if not p.vog_nodig and not p.gedragscode_vereist and not p.avg_akkoord_vereist %}
+                <span class="vog-badge nee">Niet ingesteld</span>
+                {% endif %}
+              </div>
+              <details class="vog-details">
+                <summary>Instellen</summary>
+                <form method="POST" action="/beheer/profielen/vog/{{ p.id }}" class="vog-form">
+                  <div class="vog-row">
+                    <label>VOG nodig</label>
+                    <select name="vog_nodig" class="vog-sel">
+                      <option value="">—</option>
+                      <option value="Ja"  {{ 'selected' if p.vog_nodig == 'Ja'  }}>Ja</option>
+                      <option value="Nee" {{ 'selected' if p.vog_nodig == 'Nee' }}>Nee</option>
+                    </select>
+                  </div>
+                  <div class="vog-row">
+                    <label>Gedragscode vereist</label>
+                    <select name="gedragscode_vereist" class="vog-sel">
+                      <option value="">—</option>
+                      <option value="Ja"  {{ 'selected' if p.gedragscode_vereist == 'Ja'  }}>Ja</option>
+                      <option value="Nee" {{ 'selected' if p.gedragscode_vereist == 'Nee' }}>Nee</option>
+                    </select>
+                  </div>
+                  <div class="vog-row">
+                    <label>AVG/Vertrouwelijkheid</label>
+                    <select name="avg_akkoord_vereist" class="vog-sel">
+                      <option value="">—</option>
+                      <option value="Ja"  {{ 'selected' if p.avg_akkoord_vereist == 'Ja'  }}>Ja</option>
+                      <option value="Nee" {{ 'selected' if p.avg_akkoord_vereist == 'Nee' }}>Nee</option>
+                    </select>
+                  </div>
+                  <div style="text-align:right">
+                    <button type="submit" class="btn-save-sm">Opslaan</button>
+                  </div>
                 </form>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% else %}
-      <div class="empty">Nog geen profielen toegevoegd.</div>
-      {% endif %}
-    </div>
+              </details>
+            </td>
 
+            <!-- Verwijderen -->
+            <td>
+              <form method="POST" action="/beheer/profielen/verwijderen/{{ p.id }}"
+                    onsubmit="return confirm('Profiel {{ p.naam }} verwijderen?')">
+                <button type="submit" class="btn-del" title="Verwijderen">✕</button>
+              </form>
+            </td>
+
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty">Nog geen profielen toegevoegd.</div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}
