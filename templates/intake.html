@@ -222,7 +222,7 @@
           {{ jn('beschikbaar_zaterdag_08_10', 'Zaterdag  08:00–10:00') }}
           {{ jn('beschikbaar_zaterdag_10_12', 'Zaterdag  10:00–12:00') }}
         </div>
-        {% elif taak.profiel == 'Jeugd' %}
+        {% elif taak.profiel in ['Jeugd', 'Senioren'] %}
         <div class="jn-grid">
           {{ jn('beschikbaar_maandag',   'Maandag') }}
           {{ jn('beschikbaar_dinsdag',   'Dinsdag') }}
@@ -259,7 +259,7 @@
                 {% for f in ['Wekelijks','1x per 2 weken','1x per 3 weken','1x per 4 weken'] %}
                 <option value="{{ f }}" {{ 'selected' if data.get('frequentie_inzet') == f }}>{{ f }}</option>
                 {% endfor %}
-              {% elif taak.profiel == 'Jeugd' %}
+              {% elif taak.profiel in ['Jeugd', 'Senioren'] %}
                 {% for f in ['1x per week','2x per week','1x per 2 weken','2x per 2 weken'] %}
                 <option value="{{ f }}" {{ 'selected' if data.get('frequentie_inzet') == f }}>{{ f }}</option>
                 {% endfor %}
@@ -271,7 +271,7 @@
             </select>
           </div>
         </div>
-        {% if taak.profiel not in ['Accommodatie', 'Horeca', 'Jeugd', 'Gastvrijheid & Ontvangst'] %}
+        {% if taak.profiel not in ['Accommodatie', 'Horeca', 'Jeugd', 'Senioren', 'Gastvrijheid & Ontvangst'] %}
         <div class="jn-grid" style="margin-top:.6rem">
           {{ jn('bereid_structureel',  'Bereid structurele taken uit te voeren') }}
           {{ jn('bereid_projectmatig', 'Bereid projectmatige ondersteuning te leveren') }}
@@ -375,6 +375,99 @@
               <label>Taken liever vermijden</label>
               <input type="text" name="taken_vermijden" placeholder="…" value="{{ data.get('taken_vermijden','') }}">
             </div>
+          </div>
+          <div class="jn-grid c1" style="margin-top:.6rem">
+            {{ jn('interesse_coordinatie', 'Interesse coördinerende rol') }}
+          </div>
+        </div>
+
+      {% elif taak.profiel == 'Senioren' %}
+
+        <!-- Rollen binnen Senioren -->
+        <div class="isec">
+          <div class="isec-head">
+            Rollen binnen Senioren
+            <span style="font-size:.7rem;font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;opacity:.7;margin-left:.5rem">meerdere selecties mogelijk</span>
+          </div>
+          <div class="mc-grid">
+            {% for rol in ['Coördinator','Trainer','Assistent-trainer','Coach','Grensrechter','Scheidsrechter','Teammanager','Keeper-trainer'] %}
+            <label class="mc-item">
+              <input type="checkbox" name="rollen_profiel" value="{{ rol }}"
+                     {{ 'checked' if rol in (data.get('rollen_profiel') or []) }}>
+              {{ rol }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Ervaring & vaardigheden — Senioren -->
+        <div class="isec">
+          <div class="isec-head">Ervaring & vaardigheden</div>
+          <div class="jn-grid">
+            {{ jn('ervaring_trainer',        'Ervaring trainer') }}
+            {{ jn('ervaring_coach',          'Ervaring als coach') }}
+            {{ jn('ervaring_grensrechter',   'Ervaring grensrechter') }}
+            {{ jn('ervaring_scheidsrechter', 'Ervaring scheidsrechter') }}
+            {{ jn('communicatief_vaardig',   'Communicatief vaardig') }}
+            {{ jn('organisatorisch_sterk',   'Organisatorisch sterk') }}
+          </div>
+        </div>
+
+        <!-- Trainersdiploma's -->
+        <div class="isec">
+          <div class="isec-head">
+            Trainersdiploma's
+            <span style="font-size:.7rem;font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;opacity:.7;margin-left:.5rem">meerdere selecties mogelijk</span>
+          </div>
+          <div class="mc-grid">
+            {% for d in ['UEFA C','UEFA B','UEFA A','UEFA Pro','Keeperstrainer licentie','Geen diploma'] %}
+            <label class="mc-item">
+              <input type="checkbox" name="trainers_diploma" value="{{ d }}"
+                     {{ 'checked' if d in (data.get('trainers_diploma') or []) }}>
+              {{ d }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Voorkeuren — Senioren -->
+        <div class="isec">
+          <div class="isec-head">Voorkeuren</div>
+          <div class="ifield" style="margin-bottom:.75rem">
+            <label>Voorkeur werkzaamheden</label>
+            <div class="mc-grid" style="margin-top:.4rem">
+              {% for opt in ['Training','Begeleiding','Wedstrijden','Grensrechter','Scheidsrechter','Coördinatie'] %}
+              <label class="mc-item">
+                <input type="checkbox" name="voorkeur_werkzaamheden" value="{{ opt }}"
+                       {{ 'checked' if opt in (data.get('voorkeur_werkzaamheden') or []) }}>
+                {{ opt }}
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="irow2">
+            <div class="ifield">
+              <label>Voorkeur team</label>
+              <select name="voorkeur_team">
+                <option value="">—</option>
+                {% for opt in ['1e elftal','2e elftal','3e elftal','Dameselftal','Veteranen','Geen voorkeur'] %}
+                <option value="{{ opt }}" {{ 'selected' if data.get('voorkeur_team') == opt }}>{{ opt }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="ifield">
+              <label>Voorkeur dagdeel</label>
+              <select name="voorkeur_dagdeel">
+                <option value="">—</option>
+                {% for opt in ['Doordeweeks','Zaterdag','Zondag','Geen voorkeur'] %}
+                <option value="{{ opt }}" {{ 'selected' if data.get('voorkeur_dagdeel') == opt }}>{{ opt }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="ifield" style="margin-top:.6rem">
+            <label>Taken liever vermijden</label>
+            <input type="text" name="taken_vermijden" placeholder="…" value="{{ data.get('taken_vermijden','') }}">
           </div>
           <div class="jn-grid c1" style="margin-top:.6rem">
             {{ jn('interesse_coordinatie', 'Interesse coördinerende rol') }}
