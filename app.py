@@ -1167,7 +1167,7 @@ def intake_opslaan(taak_id):
         return redirect(url_for('taken'))
 
     # Sla alle formuliervelden dynamisch op — werkt voor elk profiel
-    list_fields = {'voorkeur_werkzaamheden', 'rollen_profiel'}
+    list_fields = {'voorkeur_werkzaamheden', 'rollen_profiel', 'trainers_diploma'}
     formulier_data = {}
     for key in request.form.keys():
         if key == 'actie':

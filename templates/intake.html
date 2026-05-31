@@ -205,6 +205,15 @@
           {{ jn('beschikbaar_maandag', 'Maandag') }}
           {{ jn('beschikbaar_vrijdag', 'Vrijdag') }}
         </div>
+        {% elif taak.profiel == 'Jeugd' %}
+        <div class="jn-grid">
+          {{ jn('beschikbaar_maandag',   'Maandag') }}
+          {{ jn('beschikbaar_dinsdag',   'Dinsdag') }}
+          {{ jn('beschikbaar_woensdag',  'Woensdag') }}
+          {{ jn('beschikbaar_donderdag', 'Donderdag') }}
+          {{ jn('beschikbaar_vrijdag',   'Vrijdag') }}
+          {{ jn('beschikbaar_zaterdag',  'Zaterdag') }}
+        </div>
         {% else %}
         <div class="jn-grid">
           {{ jn('beschikbaar_maandag',    'Maandag') }}
@@ -229,13 +238,19 @@
             <label>Frequentie <span style="color:#dc2626">*</span></label>
             <select name="frequentie_inzet">
               <option value="">—</option>
-              {% for f in ['Incidenteel','Maandelijks','Wekelijks','Structureel','Flexibel'] %}
-              <option value="{{ f }}" {{ 'selected' if data.get('frequentie_inzet') == f }}>{{ f }}</option>
-              {% endfor %}
+              {% if taak.profiel == 'Jeugd' %}
+                {% for f in ['1x per week','2x per week','1x per 2 weken','2x per 2 weken'] %}
+                <option value="{{ f }}" {{ 'selected' if data.get('frequentie_inzet') == f }}>{{ f }}</option>
+                {% endfor %}
+              {% else %}
+                {% for f in ['Incidenteel','Maandelijks','Wekelijks','Structureel','Flexibel'] %}
+                <option value="{{ f }}" {{ 'selected' if data.get('frequentie_inzet') == f }}>{{ f }}</option>
+                {% endfor %}
+              {% endif %}
             </select>
           </div>
         </div>
-        {% if taak.profiel not in ['Accommodatie', 'Horeca'] %}
+        {% if taak.profiel not in ['Accommodatie', 'Horeca', 'Jeugd'] %}
         <div class="jn-grid" style="margin-top:.6rem">
           {{ jn('bereid_structureel',  'Bereid structurele taken uit te voeren') }}
           {{ jn('bereid_projectmatig', 'Bereid projectmatige ondersteuning te leveren') }}
@@ -261,6 +276,102 @@
             {{ jn('ervaring_klussen',       'Klussen algemeen') }}
             {{ jn('ervaring_tuinonderhoud', 'Tuinonderhoud') }}
             {{ jn('ervaring_schoonmaak',    'Schoonmaak') }}
+          </div>
+        </div>
+
+      {% elif taak.profiel == 'Jeugd' %}
+
+        <!-- Rollen binnen Jeugd -->
+        <div class="isec">
+          <div class="isec-head">
+            Rollen binnen Jeugd
+            <span style="font-size:.7rem;font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;opacity:.7;margin-left:.5rem">meerdere selecties mogelijk</span>
+          </div>
+          <div class="mc-grid">
+            {% for rol in ['Coördinator','Trainer','Assistent-trainer','Leider','Coach','Spelbegeleider','Grensrechter','Scheidsrechter','Teammanager','Keeper-trainer'] %}
+            <label class="mc-item">
+              <input type="checkbox" name="rollen_profiel" value="{{ rol }}"
+                     {{ 'checked' if rol in (data.get('rollen_profiel') or []) }}>
+              {{ rol }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Ervaring & vaardigheden — Jeugd -->
+        <div class="isec">
+          <div class="isec-head">Ervaring & vaardigheden</div>
+          <div class="jn-grid">
+            {{ jn('ervaring_jeugdtrainer',   'Ervaring jeugdtrainer') }}
+            {{ jn('ervaring_jeugdleider',    'Ervaring jeugdleider') }}
+            {{ jn('ervaring_spelbegeleider', 'Ervaring spelbegeleider') }}
+            {{ jn('ervaring_coach',          'Ervaring als coach') }}
+            {{ jn('ervaring_grensrechter',   'Ervaring grensrechter') }}
+            {{ jn('ervaring_scheidsrechter', 'Ervaring scheidsrechter') }}
+            {{ jn('geduld_kinderen',         'Geduldig met kinderen') }}
+            {{ jn('communicatief_vaardig',   'Communicatief vaardig') }}
+            {{ jn('organisatorisch_sterk',   'Organisatorisch sterk') }}
+          </div>
+        </div>
+
+        <!-- Trainersdiploma's -->
+        <div class="isec">
+          <div class="isec-head">
+            Trainersdiploma's
+            <span style="font-size:.7rem;font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;opacity:.7;margin-left:.5rem">meerdere selecties mogelijk</span>
+          </div>
+          <div class="mc-grid">
+            {% for d in ['UEFA C','UEFA B','UEFA A','KNVB Jeugd Opleider A','KNVB Jeugd Opleider B','Coachen op maat (basis)','Coachen op maat (gevorderd)','Geen diploma'] %}
+            <label class="mc-item">
+              <input type="checkbox" name="trainers_diploma" value="{{ d }}"
+                     {{ 'checked' if d in (data.get('trainers_diploma') or []) }}>
+              {{ d }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Voorkeuren — Jeugd -->
+        <div class="isec">
+          <div class="isec-head">Voorkeuren</div>
+          <div class="ifield" style="margin-bottom:.75rem">
+            <label>Voorkeur werkzaamheden</label>
+            <div class="mc-grid" style="margin-top:.4rem">
+              {% for opt in ['Training','Begeleiding','Wedstrijden','Grensrechter','Scheidsrechter','Coördinatie'] %}
+              <label class="mc-item">
+                <input type="checkbox" name="voorkeur_werkzaamheden" value="{{ opt }}"
+                       {{ 'checked' if opt in (data.get('voorkeur_werkzaamheden') or []) }}>
+                {{ opt }}
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="irow2">
+            <div class="ifield">
+              <label>Voorkeur leeftijdscategorie</label>
+              <select name="voorkeur_leeftijd">
+                <option value="">—</option>
+                {% for opt in ['JO7-JO8','JO9-JO10','JO11-JO12','JO13-JO14','JO15-JO16','JO17-JO19','Senioren','Geen voorkeur'] %}
+                <option value="{{ opt }}" {{ 'selected' if data.get('voorkeur_leeftijd') == opt }}>{{ opt }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="ifield">
+              <label>Voorkeur dagdeel</label>
+              <select name="voorkeur_dagdeel">
+                <option value="">—</option>
+                {% for opt in ['Doordeweeks','Zaterdag','Geen voorkeur'] %}
+                <option value="{{ opt }}" {{ 'selected' if data.get('voorkeur_dagdeel') == opt }}>{{ opt }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="ifield" style="margin-top:.6rem">
+            <label>Taken liever vermijden</label>
+            <input type="text" name="taken_vermijden" placeholder="…" value="{{ data.get('taken_vermijden','') }}">
+          </div>
+          <div class="jn-grid c1" style="margin-top:.6rem">
+            {{ jn('interesse_coordinatie', 'Interesse coördinerende rol') }}
           </div>
         </div>
 
