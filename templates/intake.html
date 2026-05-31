@@ -205,6 +205,11 @@
           {{ jn('beschikbaar_maandag', 'Maandag') }}
           {{ jn('beschikbaar_vrijdag', 'Vrijdag') }}
         </div>
+        {% elif taak.profiel == 'Gastvrijheid & Ontvangst' %}
+        <div class="jn-grid">
+          {{ jn('beschikbaar_zaterdag_08_10', 'Zaterdag  08:00–10:00') }}
+          {{ jn('beschikbaar_zaterdag_10_12', 'Zaterdag  10:00–12:00') }}
+        </div>
         {% elif taak.profiel == 'Jeugd' %}
         <div class="jn-grid">
           {{ jn('beschikbaar_maandag',   'Maandag') }}
@@ -238,7 +243,11 @@
             <label>Frequentie <span style="color:#dc2626">*</span></label>
             <select name="frequentie_inzet">
               <option value="">—</option>
-              {% if taak.profiel == 'Jeugd' %}
+              {% if taak.profiel == 'Gastvrijheid & Ontvangst' %}
+                {% for f in ['Wekelijks','1x per 2 weken','1x per 3 weken','1x per 4 weken'] %}
+                <option value="{{ f }}" {{ 'selected' if data.get('frequentie_inzet') == f }}>{{ f }}</option>
+                {% endfor %}
+              {% elif taak.profiel == 'Jeugd' %}
                 {% for f in ['1x per week','2x per week','1x per 2 weken','2x per 2 weken'] %}
                 <option value="{{ f }}" {{ 'selected' if data.get('frequentie_inzet') == f }}>{{ f }}</option>
                 {% endfor %}
@@ -250,7 +259,7 @@
             </select>
           </div>
         </div>
-        {% if taak.profiel not in ['Accommodatie', 'Horeca', 'Jeugd'] %}
+        {% if taak.profiel not in ['Accommodatie', 'Horeca', 'Jeugd', 'Gastvrijheid & Ontvangst'] %}
         <div class="jn-grid" style="margin-top:.6rem">
           {{ jn('bereid_structureel',  'Bereid structurele taken uit te voeren') }}
           {{ jn('bereid_projectmatig', 'Bereid projectmatige ondersteuning te leveren') }}
@@ -260,7 +269,33 @@
 
       {# ── Profielspecifieke secties ── #}
 
-      {% if taak.profiel == 'Accommodatie' %}
+      {% if taak.profiel == 'Gastvrijheid & Ontvangst' %}
+
+        <!-- Voorkeur samenstelling -->
+        <div class="isec">
+          <div class="isec-head">
+            Met wie wil je staan?
+            <span style="font-size:.7rem;font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;opacity:.7;margin-left:.5rem">meerdere selecties mogelijk</span>
+          </div>
+          {% if partner_vrijwilligers %}
+          <div class="mc-grid">
+            {% for vw in partner_vrijwilligers %}
+            {% set vw_naam = (vw.voornaam + (' ' + vw.tussenvoegsel if vw.tussenvoegsel else '') + ' ' + vw.achternaam) if vw.voornaam else vw.naam %}
+            <label class="mc-item">
+              <input type="checkbox" name="voorkeur_partners" value="{{ vw_naam }}"
+                     {{ 'checked' if vw_naam in (data.get('voorkeur_partners') or []) }}>
+              {{ vw_naam }}
+            </label>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p style="font-size:.85rem;color:#94a3b8">
+            Er zijn nog geen andere vrijwilligers geregistreerd voor dit profiel.
+          </p>
+          {% endif %}
+        </div>
+
+      {% elif taak.profiel == 'Accommodatie' %}
 
         <!-- Ervaring & vaardigheden — Accommodatie -->
         <div class="isec">

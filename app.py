@@ -1151,9 +1151,25 @@ def intake_form(taak_id):
 
     intake = conn.execute('SELECT * FROM intakes WHERE taak_id = ?', (taak_id,)).fetchone()
     formulier_data = json.loads(intake['formulier_data']) if intake and intake['formulier_data'] else {}
+
+    # Haal medevrijwilligers op voor het partnerveld (Gastvrijheid & Ontvangst)
+    partner_vrijwilligers = []
+    if taak['profiel'] == 'Gastvrijheid & Ontvangst':
+        partner_vrijwilligers = conn.execute(
+            """SELECT id, naam, voornaam, tussenvoegsel, achternaam
+               FROM vrijwilligers
+               WHERE (profielen LIKE ? OR profielen LIKE ? OR profielen = ?)
+               AND (gearchiveerd IS NULL OR gearchiveerd = 0)
+               AND id != ?
+               ORDER BY achternaam, voornaam, naam""",
+            ('%||Gastvrijheid & Ontvangst%', 'Gastvrijheid & Ontvangst||%',
+             'Gastvrijheid & Ontvangst', taak['vrijwilliger_id'])
+        ).fetchall()
+
     conn.close()
     return render_template('intake.html', taak=taak, intake=intake,
-                           data=formulier_data)
+                           data=formulier_data,
+                           partner_vrijwilligers=partner_vrijwilligers)
 
 
 @app.route('/intake/<int:taak_id>', methods=['POST'])
@@ -1167,7 +1183,7 @@ def intake_opslaan(taak_id):
         return redirect(url_for('taken'))
 
     # Sla alle formuliervelden dynamisch op — werkt voor elk profiel
-    list_fields = {'voorkeur_werkzaamheden', 'rollen_profiel', 'trainers_diploma'}
+    list_fields = {'voorkeur_werkzaamheden', 'rollen_profiel', 'trainers_diploma', 'voorkeur_partners'}
     formulier_data = {}
     for key in request.form.keys():
         if key == 'actie':
