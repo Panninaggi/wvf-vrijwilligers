@@ -824,8 +824,25 @@ def toevoegen():
         'status_vrijwilliger': request.form.get('status_vrijwilliger',''),
         'profielen': '||'.join(request.form.getlist('profielen')),
     })
+
+    # Taken aanmaken per profiel (zelfde logica als registreren)
+    vw_id = conn.scalar('SELECT id FROM vrijwilligers WHERE naam=? ORDER BY id DESC LIMIT 1', (naam,))
+    geselecteerde_profielen = request.form.getlist('profielen')
+    eerste_taak_id = None
+    for profiel_naam in geselecteerde_profielen:
+        taak_id = conn.insert(
+            'INSERT INTO taken (vrijwilliger_id, eigenaar_id, profiel, type, status) VALUES (?,?,?,?,?)',
+            (vw_id, None, profiel_naam, 'intake', 'Nieuw')
+        )
+        if eerste_taak_id is None:
+            eerste_taak_id = taak_id
+
     conn.commit()
     conn.close()
+
+    if eerste_taak_id:
+        flash(f'Vrijwilliger opgeslagen. Vul nu de intake in.', 'info')
+        return redirect(url_for('intake_form', taak_id=eerste_taak_id, new='1'))
     return redirect(url_for('index'))
 
 
@@ -1166,10 +1183,23 @@ def intake_form(taak_id):
              'Gastvrijheid & Ontvangst', taak['vrijwilliger_id'])
         ).fetchall()
 
+    # Volgende openstaande intake voor dezelfde vrijwilliger (bij doorklikken na toevoegen)
+    is_new = request.args.get('new') == '1'
+    volgende_taak = None
+    if is_new:
+        volgende_taak = conn.execute('''
+            SELECT t.id FROM taken t
+            LEFT JOIN intakes i ON i.taak_id = t.id
+            WHERE t.vrijwilliger_id = ? AND t.id != ? AND i.id IS NULL
+            ORDER BY t.id LIMIT 1
+        ''', (taak['vrijwilliger_id'], taak_id)).fetchone()
+
     conn.close()
     return render_template('intake.html', taak=taak, intake=intake,
                            data=formulier_data,
-                           partner_vrijwilligers=partner_vrijwilligers)
+                           partner_vrijwilligers=partner_vrijwilligers,
+                           is_new=is_new,
+                           volgende_taak=volgende_taak)
 
 
 @app.route('/intake/<int:taak_id>', methods=['POST'])
@@ -1229,6 +1259,28 @@ def intake_opslaan(taak_id):
         )
 
     conn.commit()
+
+    # Na het opslaan: bij nieuwe vrijwilliger naar volgende intake of naar detailpagina
+    is_new = request.form.get('is_new') == '1'
+    if is_new:
+        conn2 = get_db()
+        volgende = conn2.execute('''
+            SELECT t.id FROM taken t
+            LEFT JOIN intakes i ON i.taak_id = t.id
+            WHERE t.vrijwilliger_id = ? AND t.id != ? AND i.id IS NULL
+            ORDER BY t.id LIMIT 1
+        ''', (taak['vrijwilliger_id'], taak_id)).fetchone()
+        conn2.close()
+        if actie == 'opslaan':
+            flash('Intake opgeslagen als concept.', 'success')
+            return redirect(url_for('intake_form', taak_id=taak_id, new='1'))
+        if volgende:
+            flash('Intake ingediend. Vul nu de volgende intake in.', 'success')
+            return redirect(url_for('intake_form', taak_id=volgende['id'], new='1'))
+        flash('Alle intakes ingevuld!', 'success')
+        conn.close()
+        return redirect(url_for('vrijwilliger_detail', vid=taak['vrijwilliger_id']))
+
     conn.close()
     flash('Intake opgeslagen.' if actie == 'opslaan' else 'Intake ingediend.', 'success')
     return redirect(url_for('taken'))
