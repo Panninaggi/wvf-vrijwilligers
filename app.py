@@ -1449,9 +1449,17 @@ def profiel_toevoegen():
 @login_required
 @rol_vereist('beheerder')
 def profiel_eigenaar(pid):
+    eigenaar_id = request.form.get('eigenaar_id') or None
     conn = get_db()
-    conn.execute('UPDATE profielen SET eigenaar_id=? WHERE id=?',
-                 (request.form.get('eigenaar_id') or None, pid))
+    # Profiel bijwerken
+    profiel = conn.execute('SELECT naam FROM profielen WHERE id=?', (pid,)).fetchone()
+    conn.execute('UPDATE profielen SET eigenaar_id=? WHERE id=?', (eigenaar_id, pid))
+    # Open taken voor dit profiel ook bijwerken
+    if profiel:
+        conn.execute(
+            "UPDATE taken SET eigenaar_id=? WHERE profiel=? AND status != 'Voltooid'",
+            (eigenaar_id, profiel['naam'])
+        )
     conn.commit()
     conn.close()
     return redirect(url_for('profielen_beheer'))
