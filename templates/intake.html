@@ -200,7 +200,7 @@
         </div>
       </div>
 
-      {% if taak.profiel not in ['Voetbalontwikkeling', 'Financiën'] %}
+      {% if taak.profiel not in ['Voetbalontwikkeling', 'Financiën', 'Evenementen'] %}
       <!-- Beschikbaarheid & inzet -->
       <div class="isec">
         <div class="isec-head">Beschikbaarheid & inzet</div>
@@ -770,6 +770,98 @@
                 <option value="">—</option>
                 {% for opt in ['Zelfstandig','In team','Geen voorkeur'] %}
                 <option value="{{ opt }}" {{ 'selected' if data.get('voorkeur_team') == opt }}>{{ opt }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="ifield">
+              <label>Taken liever vermijden</label>
+              <input type="text" name="taken_vermijden" placeholder="…" value="{{ data.get('taken_vermijden','') }}">
+            </div>
+          </div>
+          <div class="jn-grid c1" style="margin-top:.6rem">
+            {{ jn('interesse_coordinatie', 'Interesse coördinerende rol') }}
+          </div>
+        </div>
+
+      {% elif taak.profiel == 'Evenementen' %}
+
+        <!-- Evenementen selectie -->
+        <div class="isec">
+          <div class="isec-head">
+            Bij welke evenementen kun je helpen?
+            <span style="font-size:.7rem;font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;opacity:.7;margin-left:.5rem">meerdere selecties mogelijk</span>
+          </div>
+          <div class="mc-grid">
+            {% for ev in [
+              'Wedstrijddag met zanger',
+              'Feestavonden',
+              'Nieuwjaarsreceptie',
+              'Vrijwilligersavond',
+              'Bingo-avond',
+              'Eieren gooien',
+              'WVF Toernooi',
+              'Westenholte Festival',
+            ] %}
+            <label class="mc-item">
+              <input type="checkbox" name="evenementen_selectie" value="{{ ev }}"
+                     {{ 'checked' if ev in (data.get('evenementen_selectie') or []) }}>
+              {{ ev }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Rollen bij evenementen -->
+        <div class="isec">
+          <div class="isec-head">
+            Rollen bij evenementen
+            <span style="font-size:.7rem;font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;opacity:.7;margin-left:.5rem">meerdere selecties mogelijk</span>
+          </div>
+          <div class="mc-grid">
+            {% for rol in [
+              'Organisator/coördinator',
+              'Opbouw & afbouw',
+              'Gastheer/gastvrouw',
+              'Bardienst',
+              'Keuken/catering',
+              'Kassa & verkoop',
+              'Techniek (geluid/licht)',
+              'Decoratie & styling',
+              'Communicatie & promotie',
+              'Vervoer & logistiek',
+              'EHBO',
+            ] %}
+            <label class="mc-item">
+              <input type="checkbox" name="rollen_profiel" value="{{ rol }}"
+                     {{ 'checked' if rol in (data.get('rollen_profiel') or []) }}>
+              {{ rol }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Voorkeuren — Evenementen -->
+        <div class="isec">
+          <div class="isec-head">Voorkeuren</div>
+          <div class="ifield" style="margin-bottom:.75rem">
+            <label>Voorkeur werkzaamheden</label>
+            <div class="mc-grid" style="margin-top:.4rem">
+              {% for opt in ['Organisatie','Opbouw & afbouw','Gastheer/gastvrouw','Bardienst','Keuken/catering','Kassa','Techniek','Decoratie','Communicatie','EHBO'] %}
+              <label class="mc-item">
+                <input type="checkbox" name="voorkeur_werkzaamheden" value="{{ opt }}"
+                       {{ 'checked' if opt in (data.get('voorkeur_werkzaamheden') or []) }}>
+                {{ opt }}
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="irow2">
+            <div class="ifield">
+              <label>Voorkeur type evenement</label>
+              <select name="voorkeur_evenement_type">
+                <option value="">—</option>
+                {% for opt in ['Sportief (wedstrijddagen/toernooi)','Feestelijk (feestavond/bingo)','Receptie/bijeenkomst','Buiten (festival/eieren gooien)','Alle typen','Geen voorkeur'] %}
+                <option value="{{ opt }}" {{ 'selected' if data.get('voorkeur_evenement_type') == opt }}>{{ opt }}</option>
                 {% endfor %}
               </select>
             </div>
