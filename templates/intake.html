@@ -793,7 +793,7 @@
           </div>
           <div class="mc-grid">
             {% for rol in [
-              'Beheer Sportlink',
+              'Beheer Sportlink (ledenadministratie)',
               'Beheer VoetbalAssist',
               'Beheer vrijwilligersmodule',
               'App-ontwikkeling',
@@ -801,7 +801,6 @@
               'IT-ondersteuning & helpdesk',
               'Databeheer & rapportage',
               'Systeembeheer',
-              'Ledenadministratie',
               'Secretariaat',
             ] %}
             <label class="mc-item">
@@ -819,7 +818,7 @@
           <div class="ifield" style="margin-bottom:.75rem">
             <label>Voorkeur werkzaamheden</label>
             <div class="mc-grid" style="margin-top:.4rem">
-              {% for opt in ['Sportlink','VoetbalAssist','Applicatiebeheer','App-ontwikkeling','Website','IT-ondersteuning','Databeheer','Ledenadministratie','Secretariaat'] %}
+              {% for opt in ['Sportlink (ledenadministratie)','VoetbalAssist','Applicatiebeheer','App-ontwikkeling','Website','IT-ondersteuning','Databeheer','Secretariaat'] %}
               <label class="mc-item">
                 <input type="checkbox" name="voorkeur_werkzaamheden" value="{{ opt }}"
                        {{ 'checked' if opt in (data.get('voorkeur_werkzaamheden') or []) }}>
