@@ -200,7 +200,7 @@
         </div>
       </div>
 
-      {% if taak.profiel not in ['Voetbalontwikkeling', 'Financiën', 'Evenementen'] %}
+      {% if taak.profiel not in ['Voetbalontwikkeling', 'Financiën', 'Evenementen', 'Administratie & IT ondersteuning'] %}
       <!-- Beschikbaarheid & inzet -->
       <div class="isec">
         <div class="isec-head">Beschikbaarheid & inzet</div>
@@ -773,6 +773,62 @@
                 {% endfor %}
               </select>
             </div>
+            <div class="ifield">
+              <label>Taken liever vermijden</label>
+              <input type="text" name="taken_vermijden" placeholder="…" value="{{ data.get('taken_vermijden','') }}">
+            </div>
+          </div>
+          <div class="jn-grid c1" style="margin-top:.6rem">
+            {{ jn('interesse_coordinatie', 'Interesse coördinerende rol') }}
+          </div>
+        </div>
+
+      {% elif taak.profiel == 'Administratie & IT ondersteuning' %}
+
+        <!-- Rollen Administratie & IT ondersteuning -->
+        <div class="isec">
+          <div class="isec-head">
+            Rollen binnen Administratie & IT ondersteuning
+            <span style="font-size:.7rem;font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;opacity:.7;margin-left:.5rem">meerdere selecties mogelijk</span>
+          </div>
+          <div class="mc-grid">
+            {% for rol in [
+              'Beheer Sportlink',
+              'Beheer VoetbalAssist',
+              'Beheer vrijwilligersmodule',
+              'App-ontwikkeling',
+              'Website & online communicatie',
+              'IT-ondersteuning & helpdesk',
+              'Databeheer & rapportage',
+              'Systeembeheer',
+              'Ledenadministratie',
+              'Secretariaat',
+            ] %}
+            <label class="mc-item">
+              <input type="checkbox" name="rollen_profiel" value="{{ rol }}"
+                     {{ 'checked' if rol in (data.get('rollen_profiel') or []) }}>
+              {{ rol }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Voorkeuren — Administratie & IT ondersteuning -->
+        <div class="isec">
+          <div class="isec-head">Voorkeuren</div>
+          <div class="ifield" style="margin-bottom:.75rem">
+            <label>Voorkeur werkzaamheden</label>
+            <div class="mc-grid" style="margin-top:.4rem">
+              {% for opt in ['Sportlink','VoetbalAssist','Applicatiebeheer','App-ontwikkeling','Website','IT-ondersteuning','Databeheer','Ledenadministratie','Secretariaat'] %}
+              <label class="mc-item">
+                <input type="checkbox" name="voorkeur_werkzaamheden" value="{{ opt }}"
+                       {{ 'checked' if opt in (data.get('voorkeur_werkzaamheden') or []) }}>
+                {{ opt }}
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="irow2">
             <div class="ifield">
               <label>Taken liever vermijden</label>
               <input type="text" name="taken_vermijden" placeholder="…" value="{{ data.get('taken_vermijden','') }}">

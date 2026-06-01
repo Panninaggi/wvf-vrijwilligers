@@ -24,7 +24,7 @@ EMAIL_FROM = os.environ.get('SMTP_FROM', 'WVF Vrijwilligers <noreply@wvf.nl>')
 
 # ── Profiel clusters ───────────────────────────────────────────────────────────
 PROFIELEN_SEED = [
-    'Accommodatie', 'Activiteiten & Clubbinding', 'Administratie & Ondersteuning',
+    'Accommodatie', 'Activiteiten & Clubbinding', 'Administratie & IT ondersteuning',
     'Arbitrage', 'Bestuur & Commissies', 'Communicatie & Media', 'Evenementen',
     'Financiën', 'Gastvrijheid & Ontvangst', 'Horeca', 'Jeugd', 'Senioren',
     'Sponsoring & Netwerk', 'Voetbalontwikkeling', 'Zorg & Veiligheid',
@@ -34,7 +34,7 @@ PROFIEL_CLUSTERS = [
     ('Sportief & Technisch',      ['Arbitrage', 'Jeugd', 'Senioren', 'Voetbalontwikkeling']),
     ('Evenementen & Hospitality', ['Accommodatie', 'Evenementen', 'Gastvrijheid & Ontvangst', 'Horeca']),
     ('Communicatie & PR',         ['Activiteiten & Clubbinding', 'Communicatie & Media', 'Sponsoring & Netwerk']),
-    ('Bestuur & Organisatie',     ['Administratie & Ondersteuning', 'Bestuur & Commissies', 'Financiën', 'Zorg & Veiligheid']),
+    ('Bestuur & Organisatie',     ['Administratie & IT ondersteuning', 'Bestuur & Commissies', 'Financiën', 'Zorg & Veiligheid']),
 ]
 
 ALLE_ROLLEN = ['beheerder', 'roleigenaar', 'vrijwilliger']
@@ -235,6 +235,15 @@ def init_db():
         ('tweede_eigenaar_id','INTEGER'),('tweede_eigenaar_actief','INTEGER'),
     ]:
         conn.add_col('profielen', col, typ)
+
+    # Profielnaam migraties
+    conn.execute("""UPDATE profielen SET naam='Administratie & IT ondersteuning'
+                    WHERE naam='Administratie & Ondersteuning'""")
+    conn.execute("""UPDATE taken SET profiel='Administratie & IT ondersteuning'
+                    WHERE profiel='Administratie & Ondersteuning'""")
+    conn.execute("""UPDATE vrijwilligers SET profielen=REPLACE(profielen,
+                    'Administratie & Ondersteuning','Administratie & IT ondersteuning')
+                    WHERE profielen LIKE '%Administratie & Ondersteuning%'""")
 
     if conn.scalar('SELECT COUNT(*) FROM profielen') == 0:
         conn.executemany(
