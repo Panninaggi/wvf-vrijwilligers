@@ -200,7 +200,7 @@
         </div>
       </div>
 
-      {% if taak.profiel not in ['Voetbalontwikkeling', 'Financiën', 'Evenementen', 'Administratie & IT ondersteuning', 'Sponsoring & Netwerk'] %}
+      {% if taak.profiel not in ['Voetbalontwikkeling', 'Financiën', 'Evenementen', 'Administratie & IT ondersteuning', 'Sponsoring & Netwerk', 'Communicatie & Media'] %}
       {% if taak.profiel != 'Arbitrage' %}
       <!-- Beschikbaarheid & inzet -->
       <div class="isec">
@@ -1047,6 +1047,63 @@
                 {% endfor %}
               </select>
             </div>
+            <div class="ifield">
+              <label>Taken liever vermijden</label>
+              <input type="text" name="taken_vermijden" placeholder="…" value="{{ data.get('taken_vermijden','') }}">
+            </div>
+          </div>
+          <div class="jn-grid c1" style="margin-top:.6rem">
+            {{ jn('interesse_coordinatie', 'Interesse coördinerende rol') }}
+          </div>
+        </div>
+
+      {% elif taak.profiel == 'Communicatie & Media' %}
+
+        <!-- Rollen binnen Communicatie & Media -->
+        <div class="isec">
+          <div class="isec-head">
+            Rollen binnen Communicatie & Media
+            <span style="font-size:.7rem;font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;opacity:.7;margin-left:.5rem">meerdere selecties mogelijk</span>
+          </div>
+          <div class="mc-grid">
+            {% for rol in [
+              'Beheerder X (Twitter)',
+              'Beheerder Instagram',
+              'Beheerder Facebook',
+              'Beheerder Website',
+              'Nieuwsbrief & e-mail',
+              'Contentcreatie',
+              'Fotografie',
+              'Videografie & livestream',
+              'Grafisch ontwerp',
+              'Perscontacten & PR',
+              'Notulist',
+            ] %}
+            <label class="mc-item">
+              <input type="checkbox" name="rollen_profiel" value="{{ rol }}"
+                     {{ 'checked' if rol in (data.get('rollen_profiel') or []) }}>
+              {{ rol }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Voorkeuren — Communicatie & Media -->
+        <div class="isec">
+          <div class="isec-head">Voorkeuren</div>
+          <div class="ifield" style="margin-bottom:.75rem">
+            <label>Voorkeur werkzaamheden</label>
+            <div class="mc-grid" style="margin-top:.4rem">
+              {% for opt in ['Social media','Website','Nieuwsbrief','Fotografie','Video','Grafisch ontwerp','PR & pers','Notulen','Contentcreatie'] %}
+              <label class="mc-item">
+                <input type="checkbox" name="voorkeur_werkzaamheden" value="{{ opt }}"
+                       {{ 'checked' if opt in (data.get('voorkeur_werkzaamheden') or []) }}>
+                {{ opt }}
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="irow2">
             <div class="ifield">
               <label>Taken liever vermijden</label>
               <input type="text" name="taken_vermijden" placeholder="…" value="{{ data.get('taken_vermijden','') }}">
