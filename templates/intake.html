@@ -257,7 +257,11 @@
             <label>Frequentie <span style="color:#dc2626">*</span></label>
             <select name="frequentie_inzet">
               <option value="">—</option>
-              {% if taak.profiel == 'Arbitrage' %}
+              {% if taak.profiel == 'Horeca' %}
+                {% for f in ['Wekelijks','1x per 2 weken','1x per 3 weken','1x per 4 weken','1x per 6 weken','1x per 12 weken'] %}
+                <option value="{{ f }}" {{ 'selected' if data.get('frequentie_inzet') == f }}>{{ f }}</option>
+                {% endfor %}
+              {% elif taak.profiel == 'Arbitrage' %}
                 {% for f in ['Wekelijks','1x per week','1x per twee weken','1x per drie weken','1x per 4 weken'] %}
                 <option value="{{ f }}" {{ 'selected' if data.get('frequentie_inzet') == f }}>{{ f }}</option>
                 {% endfor %}
