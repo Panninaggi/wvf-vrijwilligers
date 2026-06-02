@@ -107,6 +107,7 @@
             <th>Eigenaar</th>
             <th>Tweede bevoegde</th>
             <th>VOG & veiligheid</th>
+            <th>Export</th>
             <th></th>
           </tr>
         </thead>
@@ -208,6 +209,15 @@
                   </div>
                 </form>
               </details>
+            </td>
+
+            <!-- Export -->
+            <td>
+              <a href="/export/profiel/{{ p.naam | urlencode }}"
+                 class="btn-save-sm" title="Exporteer vrijwilligers als Excel"
+                 style="text-decoration:none;display:inline-block">
+                ↓ Excel
+              </a>
             </td>
 
             <!-- Verwijderen -->

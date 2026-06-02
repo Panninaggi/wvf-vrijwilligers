@@ -449,6 +449,12 @@ def genereer_qr_base64(url):
 
 # ── Template filters ───────────────────────────────────────────────────────────
 
+@app.template_filter('urlencode')
+def urlencode_filter(s):
+    from urllib.parse import quote
+    return quote(str(s), safe='')
+
+
 @app.template_filter('selectattr_any')
 def selectattr_any_filter(d, keys):
     """Geeft True als tenminste één sleutel een waarde heeft in dict d."""
@@ -1527,6 +1533,150 @@ def profiel_verwijderen(pid):
     conn.commit()
     conn.close()
     return redirect(url_for('profielen_beheer'))
+
+
+# ── Export ─────────────────────────────────────────────────────────────────────
+
+# Leesbare labels voor intakevelden
+_INTAKE_LABELS = {
+    'status_profiel': 'Status profiel', 'opmerkingen_profiel': 'Opmerkingen profiel',
+    'rollen_profiel': 'Rollen', 'trainers_diploma': 'Trainersdiploma\'s',
+    'scheidsrechter_diploma': 'Scheidsrechtersdiploma\'s',
+    'evenementen_selectie': 'Evenementen', 'voorkeur_werkzaamheden': 'Voorkeur werkzaamheden',
+    'voorkeur_samenwerking': 'Voorkeur samenwerking', 'voorkeur_partners': 'Voorkeur partners',
+    'voorkeur_team': 'Voorkeur team', 'voorkeur_dagdeel': 'Voorkeur dagdeel',
+    'voorkeur_locatie': 'Voorkeur locatie', 'voorkeur_categorie': 'Voorkeur categorie',
+    'voorkeur_leeftijd': 'Voorkeur leeftijdscategorie',
+    'voorkeur_evenement_type': 'Voorkeur type evenement',
+    'taken_vermijden': 'Taken liever vermijden',
+    'interesse_coordinatie': 'Interesse coördinerende rol',
+    'opmerkingen': 'Opmerkingen',
+    'beschikbaar_maandag': 'Maandag', 'beschikbaar_dinsdag': 'Dinsdag',
+    'beschikbaar_woensdag': 'Woensdag', 'beschikbaar_donderdag': 'Donderdag',
+    'beschikbaar_vrijdag': 'Vrijdag', 'beschikbaar_zaterdag': 'Zaterdag',
+    'beschikbaar_zondag': 'Zondag', 'beschikbaar_overdag': 'Overdag',
+    'beschikbaar_avonden': 'Avonden', 'beschikbaar_structureel': 'Structureel',
+    'beschikbaar_donderdagavond': 'Donderdagavond', 'beschikbaar_vrijdagavond': 'Vrijdagavond',
+    'beschikbaar_zaterdag_v': 'Zaterdag 08:00-12:00',
+    'beschikbaar_zaterdag_m': 'Zaterdag 12:00-16:00',
+    'beschikbaar_zaterdag_l': 'Zaterdag 16:00-20:00',
+    'beschikbaar_zaterdag_08_10': 'Zaterdag 08:00-10:00',
+    'beschikbaar_zaterdag_10_12': 'Zaterdag 10:00-12:00',
+    'frequentie_inzet': 'Frequentie inzet',
+    'bereid_structureel': 'Bereid structurele taken',
+    'bereid_projectmatig': 'Bereid projectmatige ondersteuning',
+    'ervaring_financieel': 'Financiële ervaring', 'ervaring_administratief': 'Administratieve ervaring',
+    'ervaring_boekhouding': 'Ervaring boekhouding', 'ervaring_begrotingen': 'Ervaring begrotingen',
+    'nauwkeurig_werken': 'Nauwkeurig werken', 'analytisch_sterk': 'Analytisch sterk',
+    'organisatorisch_sterk': 'Organisatorisch sterk', 'communicatief_vaardig': 'Communicatief vaardig',
+    'ervaring_excel': 'Excel', 'ervaring_boekhoud_software': 'Boekhoudssoftware',
+    'ervaring_sportlink': 'Sportlink', 'ervaring_rapportages': 'Rapportages/dashboards',
+    'ervaring_online_bankieren': 'Online bankieren',
+    'vog_nodig': 'VOG nodig', 'vog_aanwezig': 'VOG aanwezig',
+    'datum_vog': 'Datum VOG', 'gedragscode_akkoord': 'Gedragscode akkoord',
+    'avg_akkoord': 'AVG akkoord',
+}
+
+
+@app.route('/export/profiel/<path:profiel_naam>')
+@login_required
+@rol_vereist('beheerder')
+def export_profiel(profiel_naam):
+    import openpyxl, io
+    from openpyxl.styles import Font, PatternFill, Alignment
+    from flask import send_file
+
+    conn = get_db()
+    rows = conn.execute('''
+        SELECT v.*,
+               i.formulier_data, i.status AS intake_status, i.ingevuld
+        FROM vrijwilligers v
+        LEFT JOIN taken t ON t.vrijwilliger_id = v.id AND t.profiel = ?
+        LEFT JOIN intakes i ON i.taak_id = t.id
+        WHERE (v.profielen LIKE ? OR v.profielen LIKE ? OR v.profielen = ?)
+          AND (v.gearchiveerd IS NULL OR v.gearchiveerd = 0)
+        ORDER BY v.achternaam, v.voornaam, v.naam
+    ''', (profiel_naam,
+          f'%||{profiel_naam}%', f'{profiel_naam}||%', profiel_naam)).fetchall()
+    conn.close()
+
+    # Parseer intakedata en verzamel alle gebruikte velden
+    intake_list = []
+    intake_keys_ordered = []
+    seen_keys = set()
+    for row in rows:
+        data = json.loads(row['formulier_data']) if row['formulier_data'] else {}
+        intake_list.append(data)
+        for k in data:
+            if k not in seen_keys:
+                seen_keys.add(k)
+                intake_keys_ordered.append(k)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = profiel_naam[:31]
+
+    hdr_fill = PatternFill('solid', fgColor='1A6CC4')
+    hdr_font = Font(bold=True, color='FFFFFF')
+    hdr_align = Alignment(horizontal='center', wrap_text=True)
+
+    pers_headers = [
+        'Voornaam', 'Tussenvoegsel', 'Achternaam', 'Adres', 'Postcode',
+        'Woonplaats', 'Geboortedatum', 'E-mailadres', 'Telefoonnummer',
+        'KNVB-lid', 'Ouder/verzorger', 'Status vrijwilliger',
+        'Intake status', 'Intake ingevuld op',
+    ]
+    intake_headers = [_INTAKE_LABELS.get(k, k.replace('_', ' ').title())
+                      for k in intake_keys_ordered]
+    all_headers = pers_headers + intake_headers
+
+    for ci, h in enumerate(all_headers, 1):
+        c = ws.cell(row=1, column=ci, value=h)
+        c.font = hdr_font
+        c.fill = hdr_fill
+        c.alignment = hdr_align
+
+    for ri, (row, idata) in enumerate(zip(rows, intake_list), 2):
+        def f(v):
+            return str(v) if v is not None else ''
+        ingevuld = row['ingevuld']
+        if hasattr(ingevuld, 'strftime'):
+            ingevuld = ingevuld.strftime('%d-%m-%Y')
+        elif ingevuld:
+            ingevuld = str(ingevuld)[:10]
+
+        pers_vals = [
+            f(row['voornaam']), f(row['tussenvoegsel']), f(row['achternaam']),
+            f(row['adres']), f(row['postcode']), f(row['woonplaats']),
+            f(row['geboortedatum']), f(row['email']), f(row['telefoonnummer']),
+            f(row['knvb_lid']), f(row['ouder_verzorger']),
+            f(row['status_vrijwilliger']),
+            f(row['intake_status']), f(ingevuld),
+        ]
+        intake_vals = []
+        for k in intake_keys_ordered:
+            v = idata.get(k, '')
+            if isinstance(v, list):
+                v = ', '.join(v)
+            intake_vals.append(str(v) if v else '')
+
+        for ci, val in enumerate(pers_vals + intake_vals, 1):
+            ws.cell(row=ri, column=ci, value=val)
+
+    # Kolombreedte
+    ws.row_dimensions[1].height = 30
+    for col in ws.columns:
+        w = max((len(str(c.value or '')) for c in col), default=8)
+        ws.column_dimensions[col[0].column_letter].width = min(w + 2, 45)
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    safe = profiel_naam.replace(' ', '_').replace('&', 'en').replace('/', '-')
+    return send_file(buf,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                     as_attachment=True,
+                     download_name=f'WVF_{safe}_vrijwilligers.xlsx')
 
 
 # ── Gebruikersbeheer ───────────────────────────────────────────────────────────
