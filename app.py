@@ -1673,9 +1673,14 @@ def export_profiel(profiel_naam):
     hdr_align = Alignment(horizontal='center', wrap_text=True)
 
     pers_headers = [
-        'Voornaam', 'Tussenvoegsel', 'Achternaam', 'Adres', 'Postcode',
-        'Woonplaats', 'Geboortedatum', 'E-mailadres', 'Mobiel nummer',
-        'Alle profielen', 'KNVB-lid', 'Ouder/verzorger',
+        'Voornaam', 'Tussenvoegsel', 'Achternaam',
+        'Adres', 'Postcode', 'Woonplaats', 'Geboortedatum',
+        'E-mailadres', 'Mobiel nummer',
+        'Alle profielen',
+        'KNVB-lid', 'Relatienummer',
+        'Ouder/verzorger', 'Naam kind', 'Team kind',
+        'Eigen bedrijf', 'Sponsorinteresse', 'Vriend van WVF interesse',
+        'AVG-toestemming', 'Opmerkingen algemeen',
         'Status vrijwilliger', 'Intake status', 'Intake ingevuld op',
     ]
     intake_headers = [_INTAKE_LABELS.get(k, k.replace('_', ' ').title())
@@ -1697,14 +1702,17 @@ def export_profiel(profiel_naam):
         elif ingevuld:
             ingevuld = str(ingevuld)[:10]
 
-        # Profielen als leesbare lijst
         profielen_str = (row['profielen'] or '').replace('||', ', ')
 
         pers_vals = [
             f(row['voornaam']), f(row['tussenvoegsel']), f(row['achternaam']),
             f(row['adres']), f(row['postcode']), f(row['woonplaats']),
             f(row['geboortedatum']), f(row['email']), f(row['telefoonnummer']),
-            profielen_str, f(row['knvb_lid']), f(row['ouder_verzorger']),
+            profielen_str,
+            f(row['knvb_lid']), f(row['relatienummer']),
+            f(row['ouder_verzorger']), f(row['naam_kind']), f(row['team_kind']),
+            f(row['eigen_bedrijf']), f(row['sponsor_interesse']), f(row['vriend_wvf']),
+            f(row['avg_toestemming']), f(row['opmerkingen']),
             f(row['status_vrijwilliger']),
             f(row['intake_status']), f(ingevuld),
         ]
