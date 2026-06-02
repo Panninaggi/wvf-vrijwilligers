@@ -1613,17 +1613,33 @@ def export_profiel(profiel_naam):
     from flask import send_file
 
     conn = get_db()
+    # Subquery voor intake: één rij per vrijwilliger (laatste ingevulde intake)
     rows = conn.execute('''
         SELECT v.*,
-               i.formulier_data, i.status AS intake_status, i.ingevuld
+               ti.formulier_data, ti.intake_status, ti.ingevuld
         FROM vrijwilligers v
-        LEFT JOIN taken t ON t.vrijwilliger_id = v.id AND t.profiel = ?
-        LEFT JOIN intakes i ON i.taak_id = t.id
-        WHERE (v.profielen LIKE ? OR v.profielen LIKE ? OR v.profielen = ?)
-          AND (v.gearchiveerd IS NULL OR v.gearchiveerd = 0)
+        LEFT JOIN (
+            SELECT t.vrijwilliger_id,
+                   i.formulier_data,
+                   i.status AS intake_status,
+                   i.ingevuld
+            FROM taken t
+            LEFT JOIN intakes i ON i.taak_id = t.id
+            WHERE t.profiel = ?
+        ) ti ON ti.vrijwilliger_id = v.id
+        WHERE (
+            v.profielen = ?
+            OR v.profielen LIKE ?
+            OR v.profielen LIKE ?
+            OR v.profielen LIKE ?
+        )
+        AND (v.gearchiveerd IS NULL OR v.gearchiveerd = 0)
         ORDER BY v.achternaam, v.voornaam, v.naam
     ''', (profiel_naam,
-          f'%||{profiel_naam}%', f'{profiel_naam}||%', profiel_naam)).fetchall()
+          profiel_naam,
+          f'{profiel_naam}||%',
+          f'%||{profiel_naam}',
+          f'%||{profiel_naam}||%')).fetchall()
     conn.close()
 
     # Parseer intakedata en verzamel alle gebruikte velden
@@ -1648,9 +1664,9 @@ def export_profiel(profiel_naam):
 
     pers_headers = [
         'Voornaam', 'Tussenvoegsel', 'Achternaam', 'Adres', 'Postcode',
-        'Woonplaats', 'Geboortedatum', 'E-mailadres', 'Telefoonnummer',
-        'KNVB-lid', 'Ouder/verzorger', 'Status vrijwilliger',
-        'Intake status', 'Intake ingevuld op',
+        'Woonplaats', 'Geboortedatum', 'E-mailadres', 'Mobiel nummer',
+        'Alle profielen', 'KNVB-lid', 'Ouder/verzorger',
+        'Status vrijwilliger', 'Intake status', 'Intake ingevuld op',
     ]
     intake_headers = [_INTAKE_LABELS.get(k, k.replace('_', ' ').title())
                       for k in intake_keys_ordered]
@@ -1671,11 +1687,14 @@ def export_profiel(profiel_naam):
         elif ingevuld:
             ingevuld = str(ingevuld)[:10]
 
+        # Profielen als leesbare lijst
+        profielen_str = (row['profielen'] or '').replace('||', ', ')
+
         pers_vals = [
             f(row['voornaam']), f(row['tussenvoegsel']), f(row['achternaam']),
             f(row['adres']), f(row['postcode']), f(row['woonplaats']),
             f(row['geboortedatum']), f(row['email']), f(row['telefoonnummer']),
-            f(row['knvb_lid']), f(row['ouder_verzorger']),
+            profielen_str, f(row['knvb_lid']), f(row['ouder_verzorger']),
             f(row['status_vrijwilliger']),
             f(row['intake_status']), f(ingevuld),
         ]
