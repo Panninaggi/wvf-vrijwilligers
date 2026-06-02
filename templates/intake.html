@@ -630,7 +630,7 @@
             <span style="font-size:.7rem;font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;opacity:.7;margin-left:.5rem">meerdere selecties mogelijk</span>
           </div>
           <div class="mc-grid">
-            {% for rol in ['Barmedewerker','Keukenmedewerker','Voorraadbeheer','Inkoper','Planner horeca','Horecacoördinator','Evenementencatering','Terrasmedewerker','Schoonmaker','Bestuurskamer medewerker'] %}
+            {% for rol in ['Barmedewerker','Keukenmedewerker','Voorraadbeheer','Inkoper','Planner horeca','Horecacoördinator','Evenementencatering','Terrasmedewerker','Schoonmaker','Bestuurskamer medewerker','Theeschenker'] %}
             <label class="mc-item">
               <input type="checkbox" name="rollen_profiel" value="{{ rol }}"
                      {{ 'checked' if rol in (data.get('rollen_profiel') or []) }}>
