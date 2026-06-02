@@ -1642,9 +1642,9 @@ def export_profiel(profiel_naam):
           f'%||{profiel_naam}||%')).fetchall()
     conn.close()
 
-    # Parseer intakedata en verzamel alle gebruikte velden
+    # Parseer intakedata en verzamel gebruikte velden
     intake_list = []
-    intake_keys_ordered = []
+    all_keys_seen = []
     seen_keys = set()
     for row in rows:
         data = json.loads(row['formulier_data']) if row['formulier_data'] else {}
@@ -1652,7 +1652,17 @@ def export_profiel(profiel_naam):
         for k in data:
             if k not in seen_keys:
                 seen_keys.add(k)
-                intake_keys_ordered.append(k)
+                all_keys_seen.append(k)
+
+    # Alleen kolommen opnemen die minstens één niet-lege waarde hebben
+    def heeft_waarde(k):
+        for d in intake_list:
+            v = d.get(k)
+            if v and v not in ('', [], [''], None):
+                return True
+        return False
+
+    intake_keys_ordered = [k for k in all_keys_seen if heeft_waarde(k)]
 
     wb = openpyxl.Workbook()
     ws = wb.active
