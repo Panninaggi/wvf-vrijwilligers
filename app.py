@@ -1182,9 +1182,10 @@ def intake_form(taak_id):
     intake = conn.execute('SELECT * FROM intakes WHERE taak_id = ?', (taak_id,)).fetchone()
     formulier_data = json.loads(intake['formulier_data']) if intake and intake['formulier_data'] else {}
 
-    # Haal medevrijwilligers op voor het partnerveld (Gastvrijheid & Ontvangst)
+    # Haal medevrijwilligers op voor het partnerveld
     partner_vrijwilligers = []
-    if taak['profiel'] == 'Gastvrijheid & Ontvangst':
+    if taak['profiel'] in ('Gastvrijheid & Ontvangst', 'Horeca'):
+        p = taak['profiel']
         partner_vrijwilligers = conn.execute(
             """SELECT id, naam, voornaam, tussenvoegsel, achternaam
                FROM vrijwilligers
@@ -1192,8 +1193,7 @@ def intake_form(taak_id):
                AND (gearchiveerd IS NULL OR gearchiveerd = 0)
                AND id != ?
                ORDER BY achternaam, voornaam, naam""",
-            ('%||Gastvrijheid & Ontvangst%', 'Gastvrijheid & Ontvangst||%',
-             'Gastvrijheid & Ontvangst', taak['vrijwilliger_id'])
+            (f'%||{p}%', f'{p}||%', p, taak['vrijwilliger_id'])
         ).fetchall()
 
     # Volgende openstaande intake voor dezelfde vrijwilliger (bij doorklikken na toevoegen)

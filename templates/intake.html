@@ -697,6 +697,27 @@
           </div>
         </div>
 
+        <!-- Samenwerking -->
+        <div class="isec">
+          <div class="isec-head">Samenwerking</div>
+          <div class="ifield">
+            <label>Met wie wil je bij voorkeur samenwerken?</label>
+            <select name="voorkeur_samenwerking">
+              <option value="">— geen voorkeur —</option>
+              {% if partner_vrijwilligers %}
+                {% for vw in partner_vrijwilligers %}
+                {% set vw_naam = (vw.voornaam + (' ' + vw.tussenvoegsel if vw.tussenvoegsel else '') + ' ' + vw.achternaam) if vw.voornaam else vw.naam %}
+                <option value="{{ vw_naam }}" {{ 'selected' if data.get('voorkeur_samenwerking') == vw_naam }}>
+                  {{ vw_naam }}
+                </option>
+                {% endfor %}
+              {% else %}
+                <option disabled>Nog geen andere Horeca-vrijwilligers geregistreerd</option>
+              {% endif %}
+            </select>
+          </div>
+        </div>
+
       {% elif taak.profiel == 'Financiën' %}
 
         <!-- Rollen binnen Financiën -->
