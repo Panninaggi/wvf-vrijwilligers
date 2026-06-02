@@ -766,26 +766,52 @@ def index():
         ) t ON t.vrijwilliger_id = v.id
     '''
 
-    actief_filter = "AND (v.gearchiveerd IS NULL OR v.gearchiveerd = 0)"
+    tab = request.args.get('tab', 'alle')
+    basis_filter = "(v.gearchiveerd IS NULL OR v.gearchiveerd = 0)"
+
+    # Tellers per status voor de tabs
+    tellers = {}
+    for s in ['Nieuw', 'In behandeling', 'Actief', 'Inactief']:
+        n = conn.scalar(
+            f"SELECT COUNT(*) FROM vrijwilligers v WHERE {basis_filter} "
+            f"AND (v.status_vrijwilliger = ? OR (? = 'Nieuw' AND (v.status_vrijwilliger IS NULL OR v.status_vrijwilliger = '')))",
+            (s, s)
+        )
+        tellers[s] = n or 0
+    tellers['alle'] = conn.scalar(f"SELECT COUNT(*) FROM vrijwilligers v WHERE {basis_filter}") or 0
+
+    # Status-filter voor actieve tab
+    if tab == 'alle':
+        status_filter = ''
+        params_extra = []
+    elif tab == 'Nieuw':
+        status_filter = "AND (v.status_vrijwilliger = 'Nieuw' OR v.status_vrijwilliger IS NULL OR v.status_vrijwilliger = '')"
+        params_extra = []
+    else:
+        status_filter = "AND v.status_vrijwilliger = ?"
+        params_extra = [tab]
+
+    base_q = f'''SELECT v.*, t.taken_totaal, t.taken_voltooid, t.taken_lopend, t.taken_nieuw
+                 FROM vrijwilligers v {taak_subquery}
+                 WHERE {basis_filter} {status_filter}'''
+
     if zoek:
         q = f'%{zoek}%'
         rows = conn.execute(
-            f'''SELECT v.*, t.taken_totaal, t.taken_voltooid, t.taken_lopend, t.taken_nieuw
-                FROM vrijwilligers v {taak_subquery}
-                WHERE (v.naam LIKE ? OR v.voornaam LIKE ? OR v.achternaam LIKE ?
-                   OR v.email LIKE ? OR v.profielen LIKE ? OR v.woonplaats LIKE ?)
-                {actief_filter}
-                ORDER BY v.achternaam, v.voornaam, v.naam''', (q,q,q,q,q,q)
+            base_q + ' AND (v.naam LIKE ? OR v.voornaam LIKE ? OR v.achternaam LIKE ?'
+                     ' OR v.email LIKE ? OR v.profielen LIKE ? OR v.woonplaats LIKE ?)'
+                     ' ORDER BY v.achternaam, v.voornaam, v.naam',
+            params_extra + [q, q, q, q, q, q]
         ).fetchall()
     else:
         rows = conn.execute(
-            f'''SELECT v.*, t.taken_totaal, t.taken_voltooid, t.taken_lopend, t.taken_nieuw
-                FROM vrijwilligers v {taak_subquery}
-                WHERE (v.gearchiveerd IS NULL OR v.gearchiveerd = 0)
-                ORDER BY v.achternaam, v.voornaam, v.naam'''
+            base_q + ' ORDER BY v.achternaam, v.voornaam, v.naam',
+            params_extra
         ).fetchall()
+
     conn.close()
-    return render_template('index.html', vrijwilligers=rows, zoek=zoek)
+    return render_template('index.html', vrijwilligers=rows, zoek=zoek,
+                           tab=tab, tellers=tellers)
 
 
 @app.route('/toevoegen', methods=['GET'])

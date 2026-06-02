@@ -1,6 +1,25 @@
 {% extends 'base.html' %}
 {% block title %}Vrijwilligers — WVF{% endblock %}
 
+{% block head %}
+<style>
+  .tab-bar { display:flex; gap:0; border-bottom:2px solid #e2e8f0; margin-bottom:1.1rem; flex-wrap:wrap; }
+  .tab-item {
+    padding:.55rem 1.1rem; font-size:.85rem; font-weight:600; cursor:pointer;
+    color:#64748b; border-bottom:2px solid transparent; margin-bottom:-2px;
+    text-decoration:none; display:flex; align-items:center; gap:.4rem;
+    transition:color .15s, border-color .15s; white-space:nowrap;
+  }
+  .tab-item:hover { color:#1A6CC4; }
+  .tab-item.active { color:#1A6CC4; border-bottom-color:#1A6CC4; }
+  .tab-count {
+    font-size:.72rem; font-weight:700; padding:.1rem .4rem; border-radius:10px;
+    background:#f1f5f9; color:#64748b; min-width:1.4rem; text-align:center;
+  }
+  .tab-item.active .tab-count { background:#dbeafe; color:#1e40af; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="page">
   <div class="card">
@@ -13,10 +32,29 @@
       </div>
     </div>
 
+    <!-- Tabs -->
+    <div class="tab-bar">
+      {% set tabs = [
+        ('alle',           'Alle',           tellers.alle),
+        ('Nieuw',          'Nieuw',          tellers.Nieuw),
+        ('In behandeling', 'In behandeling', tellers['In behandeling']),
+        ('Actief',         'Actief',         tellers.Actief),
+        ('Inactief',       'Inactief',       tellers.Inactief),
+      ] %}
+      {% for t_key, t_label, t_count in tabs %}
+      <a href="/?tab={{ t_key }}{% if zoek %}&q={{ zoek }}{% endif %}"
+         class="tab-item {{ 'active' if tab == t_key else '' }}">
+        {{ t_label }}
+        <span class="tab-count">{{ t_count }}</span>
+      </a>
+      {% endfor %}
+    </div>
+
     <form method="GET" action="/" class="search-row">
+      <input type="hidden" name="tab" value="{{ tab }}">
       <input type="text" name="q" placeholder="Zoek op naam, woonplaats, e-mail of profiel…" value="{{ zoek }}">
       <button type="submit">Zoeken</button>
-      {% if zoek %}<a href="/" class="reset-link">Wis</a>{% endif %}
+      {% if zoek %}<a href="/?tab={{ tab }}" class="reset-link">Wis</a>{% endif %}
     </form>
 
     <p class="count-label">
