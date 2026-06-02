@@ -1598,6 +1598,7 @@ _INTAKE_LABELS = {
     'ervaring_excel': 'Excel', 'ervaring_boekhoud_software': 'Boekhoudssoftware',
     'ervaring_sportlink': 'Sportlink', 'ervaring_rapportages': 'Rapportages/dashboards',
     'ervaring_online_bankieren': 'Online bankieren',
+    'whatsapp_bar': 'WhatsApp Bar', 'whatsapp_keuken': 'WhatsApp Keuken',
     'vog_nodig': 'VOG nodig', 'vog_aanwezig': 'VOG aanwezig',
     'datum_vog': 'Datum VOG', 'gedragscode_akkoord': 'Gedragscode akkoord',
     'avg_akkoord': 'AVG akkoord',
