@@ -87,6 +87,24 @@ _SCHEMA = '''
         gebruiker_id INTEGER NOT NULL REFERENCES gebruikers(id) ON DELETE CASCADE,
         aangemaakt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+    CREATE TABLE IF NOT EXISTS rooster (
+        id {auto},
+        naam TEXT NOT NULL,
+        datum TEXT NOT NULL,
+        tijdvak TEXT NOT NULL,
+        dagdeel TEXT,
+        max_deelnemers INTEGER DEFAULT 0,
+        opmerkingen TEXT,
+        aangemaakt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS rooster_deelnemers (
+        id {auto},
+        rooster_id INTEGER NOT NULL REFERENCES rooster(id) ON DELETE CASCADE,
+        vrijwilliger_id INTEGER NOT NULL REFERENCES vrijwilligers(id) ON DELETE CASCADE,
+        aangemeld_door TEXT DEFAULT 'beheerder',
+        aangemaakt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(rooster_id, vrijwilliger_id)
+    );
 '''
 
 
@@ -1559,6 +1577,231 @@ def profiel_verwijderen(pid):
     conn.commit()
     conn.close()
     return redirect(url_for('profielen_beheer'))
+
+
+# ── Rooster ────────────────────────────────────────────────────────────────────
+
+ROOSTER_TIJDVAKKEN = ['Bar', 'Keuken', 'Terras', 'Bestuurskamer']
+ROOSTER_DAGDELEN   = ['Donderdagavond', 'Vrijdagavond',
+                      'Zaterdag 08:00–12:00', 'Zaterdag 12:00–16:00',
+                      'Zaterdag 16:00–20:00']
+
+
+def email_rooster_bevestiging(to_addr, naam, dienst_naam, datum, tijdvak, dagdeel, door_zichzelf=False):
+    actie = 'Je hebt je aangemeld' if door_zichzelf else 'Je staat ingepland'
+    html = f'''
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+      <div style="background:#1A6CC4;color:white;padding:1.5rem;border-radius:8px 8px 0 0">
+        <h2 style="margin:0">Horeca-dienst bevestiging</h2>
+      </div>
+      <div style="background:#f8fafc;padding:1.5rem;border-radius:0 0 8px 8px;border:1px solid #e2e8f0">
+        <p>Beste {naam},</p>
+        <p>{actie} voor de volgende Horeca-dienst:</p>
+        <table style="margin:1rem 0;border-collapse:collapse">
+          <tr><td style="padding:.3rem 1.25rem .3rem 0;color:#64748b">Dienst</td><td><strong>{dienst_naam}</strong></td></tr>
+          <tr><td style="padding:.3rem 1.25rem .3rem 0;color:#64748b">Datum</td><td><strong>{datum}</strong></td></tr>
+          <tr><td style="padding:.3rem 1.25rem .3rem 0;color:#64748b">Locatie</td><td><strong>{tijdvak}</strong></td></tr>
+          <tr><td style="padding:.3rem 1.25rem .3rem 0;color:#64748b">Tijdstip</td><td><strong>{dagdeel or '—'}</strong></td></tr>
+        </table>
+        <p style="color:#94a3b8;font-size:.85rem;margin-top:2rem">WVF Vrijwilligersbeheer</p>
+      </div>
+    </div>'''
+    send_email(to_addr, f'Horeca-dienst: {dienst_naam} op {datum} — {tijdvak}', html)
+
+
+@app.route('/rooster')
+@login_required
+@rol_vereist('beheerder', 'roleigenaar')
+def rooster():
+    conn = get_db()
+    diensten = conn.execute('''
+        SELECT r.*,
+               COUNT(rd.id) AS aantal_deelnemers
+        FROM rooster r
+        LEFT JOIN rooster_deelnemers rd ON rd.rooster_id = r.id
+        GROUP BY r.id
+        ORDER BY r.datum, r.tijdvak
+    ''').fetchall()
+
+    # Deelnemers per dienst
+    deelnemers = {}
+    for d in diensten:
+        deelnemers[d['id']] = conn.execute('''
+            SELECT rd.*, v.naam, v.voornaam, v.tussenvoegsel, v.achternaam,
+                   v.email, v.telefoonnummer, rd.aangemeld_door
+            FROM rooster_deelnemers rd
+            JOIN vrijwilligers v ON rd.vrijwilliger_id = v.id
+            WHERE rd.rooster_id = ?
+            ORDER BY v.achternaam, v.voornaam, v.naam
+        ''', (d['id'],)).fetchall()
+
+    # Beschikbare Horeca-vrijwilligers
+    horeca_vw = conn.execute('''
+        SELECT id, naam, voornaam, tussenvoegsel, achternaam, email
+        FROM vrijwilligers
+        WHERE (profielen = 'Horeca' OR profielen LIKE 'Horeca||%'
+               OR profielen LIKE '%||Horeca' OR profielen LIKE '%||Horeca||%')
+        AND (gearchiveerd IS NULL OR gearchiveerd = 0)
+        ORDER BY achternaam, voornaam, naam
+    ''').fetchall()
+    conn.close()
+    return render_template('rooster.html', diensten=diensten, deelnemers=deelnemers,
+                           horeca_vw=horeca_vw,
+                           tijdvakken=ROOSTER_TIJDVAKKEN, dagdelen=ROOSTER_DAGDELEN)
+
+
+@app.route('/rooster/dienst/aanmaken', methods=['POST'])
+@login_required
+@rol_vereist('beheerder')
+def rooster_aanmaken():
+    naam = request.form.get('naam', '').strip()
+    datum = request.form.get('datum', '').strip()
+    tijdvak = request.form.get('tijdvak', '').strip()
+    if not naam or not datum or not tijdvak:
+        flash('Vul naam, datum en tijdvak in.', 'error')
+        return redirect(url_for('rooster'))
+    conn = get_db()
+    conn.insert(
+        'INSERT INTO rooster (naam, datum, tijdvak, dagdeel, max_deelnemers, opmerkingen) VALUES (?,?,?,?,?,?)',
+        (naam, datum, tijdvak,
+         request.form.get('dagdeel', ''),
+         int(request.form.get('max_deelnemers', 0) or 0),
+         request.form.get('opmerkingen', '').strip())
+    )
+    conn.commit()
+    conn.close()
+    flash(f'Dienst "{naam}" aangemaakt.', 'success')
+    return redirect(url_for('rooster'))
+
+
+@app.route('/rooster/dienst/<int:rid>/verwijderen', methods=['POST'])
+@login_required
+@rol_vereist('beheerder')
+def rooster_verwijderen(rid):
+    conn = get_db()
+    conn.execute('DELETE FROM rooster WHERE id=?', (rid,))
+    conn.commit()
+    conn.close()
+    flash('Dienst verwijderd.', 'info')
+    return redirect(url_for('rooster'))
+
+
+@app.route('/rooster/<int:rid>/inplannen', methods=['POST'])
+@login_required
+@rol_vereist('beheerder', 'roleigenaar')
+def rooster_inplannen(rid):
+    vw_id = request.form.get('vrijwilliger_id')
+    if not vw_id:
+        flash('Selecteer een vrijwilliger.', 'error')
+        return redirect(url_for('rooster'))
+    conn = get_db()
+    dienst = conn.execute('SELECT * FROM rooster WHERE id=?', (rid,)).fetchone()
+    vw = conn.execute('SELECT * FROM vrijwilligers WHERE id=?', (vw_id,)).fetchone()
+    if not dienst or not vw:
+        conn.close()
+        flash('Dienst of vrijwilliger niet gevonden.', 'error')
+        return redirect(url_for('rooster'))
+    try:
+        conn.insert(
+            'INSERT INTO rooster_deelnemers (rooster_id, vrijwilliger_id, aangemeld_door) VALUES (?,?,?)',
+            (rid, vw_id, 'beheerder')
+        )
+        conn.commit()
+        # E-mail
+        if vw['email']:
+            naam = ' '.join(p for p in [vw['voornaam'], vw['tussenvoegsel'], vw['achternaam']] if p) or vw['naam']
+            email_rooster_bevestiging(vw['email'], naam, dienst['naam'],
+                                      dienst['datum'], dienst['tijdvak'], dienst['dagdeel'])
+        flash(f'{vw["naam"] or vw["voornaam"]} ingepland.', 'success')
+    except Exception:
+        conn.rollback()
+        flash('Deze vrijwilliger staat al ingepland voor deze dienst.', 'error')
+    conn.close()
+    return redirect(url_for('rooster'))
+
+
+@app.route('/rooster/<int:rid>/verwijder-deelnemer/<int:did>', methods=['POST'])
+@login_required
+@rol_vereist('beheerder', 'roleigenaar')
+def rooster_deelnemer_verwijderen(rid, did):
+    conn = get_db()
+    conn.execute('DELETE FROM rooster_deelnemers WHERE rooster_id=? AND vrijwilliger_id=?', (rid, did))
+    conn.commit()
+    conn.close()
+    flash('Vrijwilliger uit dienst gehaald.', 'info')
+    return redirect(url_for('rooster'))
+
+
+@app.route('/rooster/aanmelden', methods=['GET', 'POST'])
+def rooster_aanmelden():
+    """Publieke pagina voor zelfaanmelding."""
+    conn = get_db()
+    # Alleen toekomstige diensten
+    diensten = conn.execute('''
+        SELECT r.*, COUNT(rd.id) AS aantal_deelnemers
+        FROM rooster r
+        LEFT JOIN rooster_deelnemers rd ON rd.rooster_id = r.id
+        GROUP BY r.id
+        ORDER BY r.datum, r.tijdvak
+    ''').fetchall()
+
+    bericht = None
+    gevonden_vw = None
+    mijn_diensten = []
+
+    if request.method == 'POST':
+        actie = request.form.get('actie')
+        email = request.form.get('email', '').strip().lower()
+
+        vw = conn.execute(
+            'SELECT * FROM vrijwilligers WHERE LOWER(email)=? AND (gearchiveerd IS NULL OR gearchiveerd=0)',
+            (email,)
+        ).fetchone()
+
+        if not vw:
+            bericht = ('error', 'Geen vrijwilliger gevonden met dit e-mailadres. Meld je eerst aan via het aanmeldformulier.')
+        elif not any(p in (vw['profielen'] or '') for p in ['Horeca']):
+            bericht = ('error', 'Je hebt geen Horeca-profiel. Contacteer de horeca-eigenaar.')
+        else:
+            gevonden_vw = vw
+            naam = ' '.join(p for p in [vw['voornaam'], vw['tussenvoegsel'], vw['achternaam']] if p) or vw['naam']
+
+            if actie == 'aanmelden':
+                rid = request.form.get('rooster_id')
+                dienst = conn.execute('SELECT * FROM rooster WHERE id=?', (rid,)).fetchone()
+                if dienst:
+                    try:
+                        conn.insert(
+                            'INSERT INTO rooster_deelnemers (rooster_id, vrijwilliger_id, aangemeld_door) VALUES (?,?,?)',
+                            (rid, vw['id'], 'zelf')
+                        )
+                        conn.commit()
+                        if vw['email']:
+                            email_rooster_bevestiging(vw['email'], naam, dienst['naam'],
+                                                      dienst['datum'], dienst['tijdvak'],
+                                                      dienst['dagdeel'], door_zichzelf=True)
+                        bericht = ('success', f'Je bent aangemeld voor {dienst["naam"]} op {dienst["datum"]} — {dienst["tijdvak"]}.')
+                    except Exception:
+                        conn.rollback()
+                        bericht = ('info', 'Je stond al aangemeld voor deze dienst.')
+            elif actie == 'afmelden':
+                rid = request.form.get('rooster_id')
+                conn.execute('DELETE FROM rooster_deelnemers WHERE rooster_id=? AND vrijwilliger_id=?',
+                             (rid, vw['id']))
+                conn.commit()
+                bericht = ('info', 'Je bent afgemeld voor deze dienst.')
+            else:
+                # Alleen opzoeken
+                pass
+
+            mijn_diensten = [r['rooster_id'] for r in conn.execute(
+                'SELECT rooster_id FROM rooster_deelnemers WHERE vrijwilliger_id=?', (vw['id'],)
+            ).fetchall()]
+
+    conn.close()
+    return render_template('rooster_aanmelden.html', diensten=diensten,
+                           bericht=bericht, gevonden_vw=gevonden_vw,
+                           mijn_diensten=mijn_diensten)
 
 
 # ── Export ─────────────────────────────────────────────────────────────────────

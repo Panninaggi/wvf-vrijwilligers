@@ -1,0 +1,113 @@
+{% extends 'base_public.html' %}
+{% block title %}Horeca Rooster — Aanmelden{% endblock %}
+
+{% block head %}
+<style>
+  .rp { max-width:680px; margin:1.5rem auto; padding:0 1.25rem; }
+  .dienst-rij {
+    display:flex; align-items:center; justify-content:space-between; gap:1rem;
+    padding:.8rem 1rem; border-radius:8px; background:#f8fafc;
+    border:1px solid #e2e8f0; margin-bottom:.4rem; flex-wrap:wrap;
+  }
+  .dienst-rij.mijn { border-color:#1A6CC4; background:#eff6ff; }
+  .dienst-info { flex:1; }
+  .dienst-naam { font-weight:600; color:#1e293b; font-size:.9rem; }
+  .dienst-sub  { font-size:.8rem; color:#64748b; margin-top:.1rem; }
+  .tv-badge { font-size:.72rem; font-weight:700; padding:.15rem .45rem; border-radius:4px; white-space:nowrap; }
+  .tv-Bar          { background:#dbeafe; color:#1e40af; }
+  .tv-Keuken       { background:#fef9c3; color:#854d0e; }
+  .tv-Terras       { background:#dcfce7; color:#166534; }
+  .tv-Bestuurskamer{ background:#f3e8ff; color:#6b21a8; }
+  .bericht { padding:.75rem 1rem; border-radius:6px; margin-bottom:1rem; font-size:.88rem; font-weight:500; }
+  .bericht.success { background:#dcfce7; color:#166534; border:1px solid #bbf7d0; }
+  .bericht.error   { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
+  .bericht.info    { background:#dbeafe; color:#1e40af; border:1px solid #bfdbfe; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rp">
+  <div style="text-align:center;margin-bottom:1.5rem">
+    <h2 style="font-size:1.25rem;font-weight:700;color:#1A6CC4;margin-bottom:.3rem">Horeca Rooster</h2>
+    <p style="font-size:.88rem;color:#64748b">Meld je aan of af voor een dienst.</p>
+  </div>
+
+  {% if bericht %}
+  <div class="bericht {{ bericht[0] }}">{{ bericht[1] }}</div>
+  {% endif %}
+
+  <!-- Opzoekformulier -->
+  <div class="card" style="margin-bottom:1.25rem">
+    <div style="font-size:.85rem;font-weight:600;color:#475569;margin-bottom:.6rem">Voer je e-mailadres in</div>
+    <form method="POST" action="/rooster/aanmelden">
+      <input type="hidden" name="actie" value="zoeken">
+      <div style="display:flex;gap:.5rem">
+        <input type="email" name="email" required placeholder="jouw@email.nl"
+               value="{{ request.form.get('email','') }}"
+               style="flex:1;padding:.5rem .75rem;border:1.5px solid #cbd5e1;border-radius:6px;font-size:.9rem">
+        <button type="submit" class="btn-primary" style="width:auto;padding:.5rem 1rem;margin:0">Opzoeken</button>
+      </div>
+    </form>
+  </div>
+
+  {% if gevonden_vw %}
+  {% set email_val = request.form.get('email','') %}
+  <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:.6rem 1rem;margin-bottom:1rem;font-size:.85rem;color:#166534">
+    Ingelogd als: <strong>
+      {% if gevonden_vw.voornaam %}{{ gevonden_vw.voornaam }}{% if gevonden_vw.tussenvoegsel %} {{ gevonden_vw.tussenvoegsel }}{% endif %} {{ gevonden_vw.achternaam }}
+      {% else %}{{ gevonden_vw.naam }}{% endif %}
+    </strong>
+  </div>
+  {% endif %}
+
+  <!-- Diensten -->
+  {% if diensten %}
+  <div class="card">
+    <div style="font-size:.85rem;font-weight:600;color:#475569;margin-bottom:.85rem">Beschikbare diensten</div>
+    {% for d in diensten %}
+    {% set is_mijn = d.id in mijn_diensten %}
+    <div class="dienst-rij {{ 'mijn' if is_mijn else '' }}">
+      <div class="dienst-info">
+        <div class="dienst-naam">{{ d.naam }}</div>
+        <div class="dienst-sub">
+          {{ d.datum }}{% if d.dagdeel %} · {{ d.dagdeel }}{% endif %}
+          · {{ d.aantal_deelnemers }}{% if d.max_deelnemers %}/{{ d.max_deelnemers }}{% endif %} deelnemer(s)
+        </div>
+      </div>
+      <span class="tv-badge tv-{{ d.tijdvak }}">{{ d.tijdvak }}</span>
+      {% if gevonden_vw %}
+        {% set vol = d.max_deelnemers > 0 and d.aantal_deelnemers >= d.max_deelnemers and not is_mijn %}
+        {% if is_mijn %}
+        <form method="POST" action="/rooster/aanmelden">
+          <input type="hidden" name="actie" value="afmelden">
+          <input type="hidden" name="rooster_id" value="{{ d.id }}">
+          <input type="hidden" name="email" value="{{ request.form.get('email','') }}">
+          <button type="submit" style="padding:.3rem .75rem;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:5px;font-size:.82rem;font-weight:600;cursor:pointer">
+            Afmelden
+          </button>
+        </form>
+        {% elif vol %}
+        <span style="font-size:.8rem;color:#94a3b8">Vol</span>
+        {% else %}
+        <form method="POST" action="/rooster/aanmelden">
+          <input type="hidden" name="actie" value="aanmelden">
+          <input type="hidden" name="rooster_id" value="{{ d.id }}">
+          <input type="hidden" name="email" value="{{ request.form.get('email','') }}">
+          <button type="submit" style="padding:.3rem .75rem;background:#1A6CC4;color:#fff;border:none;border-radius:5px;font-size:.82rem;font-weight:600;cursor:pointer">
+            Aanmelden
+          </button>
+        </form>
+        {% endif %}
+      {% else %}
+      <span style="font-size:.8rem;color:#94a3b8">Voer e-mail in</span>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card">
+    <p style="text-align:center;color:#94a3b8;padding:2rem 0">Geen diensten gepland.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
