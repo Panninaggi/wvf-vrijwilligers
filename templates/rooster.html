@@ -55,7 +55,8 @@
         </div>
         <div class="field">
           <label>Datum <span style="color:#dc2626">*</span></label>
-          <input type="date" name="datum" required>
+          <input type="text" name="datum" required placeholder="DD-MM-JJJJ" autocomplete="off"
+                 pattern="\d{2}-\d{2}-\d{4}" title="Gebruik het formaat DD-MM-JJJJ">
         </div>
         <div class="field">
           <label>Tijdvak <span style="color:#dc2626">*</span></label>
@@ -100,7 +101,7 @@
           <div>
             <div class="dienst-titel">{{ d.naam }}</div>
             <div class="dienst-meta">
-              {{ d.datum }}
+              {{ d.datum | datum }}
               {% if d.dagdeel %} · {{ d.dagdeel }}{% endif %}
               {% if d.max_deelnemers %}<span class="max-badge"> · max {{ d.max_deelnemers }}</span>{% endif %}
             </div>

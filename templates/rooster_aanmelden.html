@@ -70,7 +70,7 @@
       <div class="dienst-info">
         <div class="dienst-naam">{{ d.naam }}</div>
         <div class="dienst-sub">
-          {{ d.datum }}{% if d.dagdeel %} · {{ d.dagdeel }}{% endif %}
+          {{ d.datum | datum }}{% if d.dagdeel %} · {{ d.dagdeel }}{% endif %}
           · {{ d.aantal_deelnemers }}{% if d.max_deelnemers %}/{{ d.max_deelnemers }}{% endif %} deelnemer(s)
         </div>
       </div>

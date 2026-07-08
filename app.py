@@ -481,12 +481,16 @@ def selectattr_any_filter(d, keys):
 
 @app.template_filter('datum')
 def datum_filter(waarde):
-    """Werkt met zowel SQLite strings als PostgreSQL datetime objecten."""
+    """Toont altijd dd-mm-yyyy, werkt met datetime, yyyy-mm-dd strings en dd-mm-yyyy strings."""
     if waarde is None:
         return ''
     if hasattr(waarde, 'strftime'):
         return waarde.strftime('%d-%m-%Y')
-    return str(waarde)[:10]
+    s = str(waarde).strip()[:10]
+    # yyyy-mm-dd → dd-mm-yyyy
+    if len(s) == 10 and s[4] == '-' and s[7] == '-':
+        return f'{s[8:10]}-{s[5:7]}-{s[0:4]}'
+    return s
 
 
 @app.template_filter('display_naam')
@@ -1711,7 +1715,7 @@ def rooster_inplannen(rid):
         if vw['email']:
             naam = ' '.join(p for p in [vw['voornaam'], vw['tussenvoegsel'], vw['achternaam']] if p) or vw['naam']
             email_rooster_bevestiging(vw['email'], naam, dienst['naam'],
-                                      dienst['datum'], dienst['tijdvak'], dienst['dagdeel'])
+                                      datum_filter(dienst['datum']), dienst['tijdvak'], dienst['dagdeel'])
         flash(f'{vw["naam"] or vw["voornaam"]} ingepland.', 'success')
     except Exception:
         conn.rollback()
@@ -1778,7 +1782,7 @@ def rooster_aanmelden():
                         conn.commit()
                         if vw['email']:
                             email_rooster_bevestiging(vw['email'], naam, dienst['naam'],
-                                                      dienst['datum'], dienst['tijdvak'],
+                                                      datum_filter(dienst['datum']), dienst['tijdvak'],
                                                       dienst['dagdeel'], door_zichzelf=True)
                         bericht = ('success', f'Je bent aangemeld voor {dienst["naam"]} op {dienst["datum"]} — {dienst["tijdvak"]}.')
                     except Exception:
