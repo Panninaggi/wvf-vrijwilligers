@@ -155,29 +155,91 @@
   </div>
 
   {% else %}
-  <!-- Jeugdlid: niet als vrijwilliger opslaan -->
+  <!-- Jeugdlid: record aanmaken voor oudercontact -->
   <div class="card">
-    <div class="card-title">Geïmporteerde gegevens (ter info)</div>
-    <table style="width:100%;font-size:.88rem;border-collapse:collapse">
-      {% for lbl, val in [
-        ('Naam', data.naam), ('Geboortedatum', data.geboortedatum),
-        ('Leeftijd', data.leeftijd ~ ' jaar'),
-        ('Adres', data.adres), ('Postcode', data.postcode),
-        ('Woonplaats', data.woonplaats), ('E-mail', data.email),
-        ('Telefoon', data.telefoon), ('Ouder/verzorger', data.ouder_naam),
-      ] %}
-      {% if val %}
-      <tr style="border-bottom:1px solid #f1f5f9">
-        <td style="padding:.4rem .75rem .4rem 0;color:#64748b;width:160px">{{ lbl }}</td>
-        <td style="padding:.4rem 0;font-weight:500">{{ val }}</td>
-      </tr>
-      {% endif %}
-      {% endfor %}
-    </table>
-    <div style="margin-top:1.25rem;display:flex;gap:.75rem">
-      <a href="/import/eml" class="btn-cancel" style="text-decoration:none">← Nieuw bestand</a>
-      <a href="/" class="btn-primary" style="flex:1;text-align:center;text-decoration:none">Terug naar overzicht</a>
-    </div>
+    <p style="font-size:.88rem;color:#64748b;margin-bottom:1.25rem;line-height:1.6">
+      Er wordt een record aangemaakt met de gegevens van het kind.
+      Het e-mailadres en telefoonnummer in de Sportlink-mail zijn van de
+      <strong>ouder/verzorger</strong> — zo kunt u contact opnemen.
+      Er worden <strong>geen intake-taken</strong> aangemaakt.
+    </p>
+
+    <form method="POST" action="/import/eml/opslaan">
+      <input type="hidden" name="is_jeugd" value="1">
+
+      <div class="section-head">Gegevens kind</div>
+      <div class="frow c3">
+        <div class="field">
+          <label>Voornaam</label>
+          <input type="text" name="voornaam" value="{{ data.voornaam }}" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Tussenvoegsel</label>
+          <input type="text" name="tussenvoegsel" value="{{ data.tussenvoegsel }}" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Achternaam</label>
+          <input type="text" name="achternaam" value="{{ data.achternaam }}" autocomplete="off">
+        </div>
+      </div>
+      <div class="frow c2">
+        <div class="field">
+          <label>Geboortedatum</label>
+          <input type="text" name="geboortedatum" value="{{ data.geboortedatum }}" autocomplete="off">
+        </div>
+      </div>
+      <div class="frow">
+        <div class="field">
+          <label>Adres</label>
+          <input type="text" name="adres" value="{{ data.adres }}" autocomplete="off">
+        </div>
+      </div>
+      <div class="frow c2">
+        <div class="field">
+          <label>Postcode</label>
+          <input type="text" name="postcode" value="{{ data.postcode }}" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Woonplaats</label>
+          <input type="text" name="woonplaats" value="{{ data.woonplaats }}" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="section-head">Contactgegevens ouder/verzorger</div>
+      <p style="font-size:.8rem;color:#94a3b8;margin:-.5rem 0 .75rem">
+        Dit zijn de contactgegevens uit de Sportlink-mail (van de ouder, niet het kind).
+      </p>
+      <div class="frow c2">
+        <div class="field">
+          <label>Naam ouder/verzorger</label>
+          <input type="text" name="ouder_naam" value="{{ data.ouder_naam }}" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>E-mailadres ouder</label>
+          <input type="email" name="email" value="{{ data.email }}" autocomplete="off">
+        </div>
+      </div>
+      <div class="frow c2">
+        <div class="field">
+          <label>Telefoonnummer ouder</label>
+          <input type="tel" name="telefoon" value="{{ data.telefoon }}" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="section-head">Opmerkingen</div>
+      <div class="frow">
+        <div class="field">
+          <textarea name="opmerkingen" style="width:100%;padding:.5rem .75rem;border:1.5px solid #cbd5e1;border-radius:6px;font-size:.9rem;font-family:inherit;resize:vertical;min-height:60px" placeholder="Optionele opmerkingen…"></textarea>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <a href="/import/eml" class="btn-cancel">Annuleren</a>
+        <button type="submit" class="btn-primary" style="flex:2">
+          Opslaan als jeugdlid →
+        </button>
+      </div>
+    </form>
   </div>
   {% endif %}
 </div>

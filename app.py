@@ -1276,65 +1276,81 @@ def import_eml_verwerken():
 @login_required
 @rol_vereist('beheerder')
 def import_eml_opslaan():
-    voornaam     = request.form.get('voornaam', '').strip()
+    voornaam      = request.form.get('voornaam', '').strip()
     tussenvoegsel = request.form.get('tussenvoegsel', '').strip()
-    achternaam   = request.form.get('achternaam', '').strip()
+    achternaam    = request.form.get('achternaam', '').strip()
     naam = ' '.join(p for p in [voornaam, tussenvoegsel, achternaam] if p)
     if not naam:
         flash('Naam ontbreekt.', 'error')
         return redirect(url_for('import_eml_form'))
 
-    geselecteerde_profielen = request.form.getlist('profielen')
+    is_jeugd = request.form.get('is_jeugd') == '1'
+    geselecteerde_profielen = [] if is_jeugd else request.form.getlist('profielen')
+
+    # Bij jeugdlid: e-mail en telefoon zijn van de ouder
+    email        = request.form.get('email', '').strip()
+    telefoon     = request.form.get('telefoon', '').strip()
+    ouder_naam   = request.form.get('ouder_naam', '').strip()
+    opmerkingen  = request.form.get('opmerkingen', '').strip()
+
+    if is_jeugd:
+        status = 'Jeugdlid'
+        opmerkingen = (
+            f"Jeugdlid — contactgegevens zijn van ouder/verzorger"
+            + (f" ({ouder_naam})" if ouder_naam else '')
+            + (f". {opmerkingen}" if opmerkingen else '')
+        )
+    else:
+        status = 'Nieuw'
 
     conn = get_db()
     vw_id = conn.insert('''
         INSERT INTO vrijwilligers
         (naam, voornaam, tussenvoegsel, achternaam, adres, postcode, woonplaats,
          geboortedatum, email, telefoonnummer, ouder_verzorger,
-         profielen, status_vrijwilliger)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+         profielen, status_vrijwilliger, opmerkingen)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ''', (naam, voornaam, tussenvoegsel, achternaam,
-          request.form.get('adres','').strip(),
-          request.form.get('postcode','').strip(),
-          request.form.get('woonplaats','').strip(),
-          request.form.get('geboortedatum','').strip(),
-          request.form.get('email','').strip(),
-          request.form.get('telefoon','').strip(),
-          request.form.get('ouder_naam','').strip() and 'Ja' or '',
+          request.form.get('adres', '').strip(),
+          request.form.get('postcode', '').strip(),
+          request.form.get('woonplaats', '').strip(),
+          request.form.get('geboortedatum', '').strip(),
+          email, telefoon,
+          'Ja' if (is_jeugd or ouder_naam) else '',
           '||'.join(geselecteerde_profielen),
-          'Nieuw'))
+          status, opmerkingen))
 
+    # Taken alleen aanmaken als 18+
     for profiel_naam in geselecteerde_profielen:
-        profiel_row = conn.execute(
-            'SELECT eigenaar_id FROM profielen WHERE naam=?', (profiel_naam,)
-        ).fetchone()
+        profiel_row = conn.execute('SELECT eigenaar_id FROM profielen WHERE naam=?', (profiel_naam,)).fetchone()
         eigenaar_id = profiel_row['eigenaar_id'] if profiel_row else None
         taak_id = conn.insert(
             'INSERT INTO taken (vrijwilliger_id, eigenaar_id, profiel, type, status) VALUES (?,?,?,?,?)',
             (vw_id, eigenaar_id, profiel_naam, 'intake', 'Nieuw')
         )
-        if profiel_row:
-            p_full = conn.execute('''
-                SELECT e.email AS eigenaar_email,
-                       e.voornaam||' '||e.achternaam AS eigenaar_naam,
-                       p.tweede_eigenaar_actief, p.tweede_eigenaar_id,
-                       e2.email AS tweede_email,
-                       e2.voornaam||' '||e2.achternaam AS tweede_naam
-                FROM profielen p
-                LEFT JOIN eigenaren e  ON p.eigenaar_id        = e.id
-                LEFT JOIN eigenaren e2 ON p.tweede_eigenaar_id = e2.id
-                WHERE p.naam = ?
-            ''', (profiel_naam,)).fetchone()
-            if p_full and p_full['eigenaar_email']:
-                email_eigenaar_notificatie(p_full['eigenaar_email'], p_full['eigenaar_naam'],
-                                           naam, profiel_naam, taak_id)
-            if p_full and p_full['tweede_eigenaar_actief'] and p_full['tweede_email']:
-                email_eigenaar_notificatie(p_full['tweede_email'], p_full['tweede_naam'],
-                                           naam, profiel_naam, taak_id)
+        p_full = conn.execute('''
+            SELECT e.email AS eigenaar_email, e.voornaam||' '||e.achternaam AS eigenaar_naam,
+                   p.tweede_eigenaar_actief, e2.email AS tweede_email,
+                   e2.voornaam||' '||e2.achternaam AS tweede_naam
+            FROM profielen p
+            LEFT JOIN eigenaren e  ON p.eigenaar_id        = e.id
+            LEFT JOIN eigenaren e2 ON p.tweede_eigenaar_id = e2.id
+            WHERE p.naam = ?
+        ''', (profiel_naam,)).fetchone()
+        if p_full and p_full['eigenaar_email']:
+            email_eigenaar_notificatie(p_full['eigenaar_email'], p_full['eigenaar_naam'],
+                                       naam, profiel_naam, taak_id)
+        if p_full and p_full['tweede_eigenaar_actief'] and p_full['tweede_email']:
+            email_eigenaar_notificatie(p_full['tweede_email'], p_full['tweede_naam'],
+                                       naam, profiel_naam, taak_id)
 
     conn.commit()
     conn.close()
-    flash(f'{naam} geïmporteerd en taken aangemaakt.', 'success')
+
+    if is_jeugd:
+        flash(f'{naam} opgeslagen als jeugdlid — geen intake-taken aangemaakt.', 'info')
+    else:
+        flash(f'{naam} geïmporteerd en taken aangemaakt.', 'success')
     return redirect(url_for('vrijwilliger_detail', vid=vw_id))
 
 

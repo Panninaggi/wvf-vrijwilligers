@@ -186,7 +186,7 @@
           <label>Status vrijwilliger</label>
           <select name="status_vrijwilliger">
             <option value="">—</option>
-            {% for opt in ['Nieuw','Actief','In behandeling','Inactief'] %}
+            {% for opt in ['Nieuw','Actief','In behandeling','Inactief','Jeugdlid'] %}
             <option value="{{ opt }}" {{ 'selected' if v.status_vrijwilliger == opt }}>{{ opt }}</option>
             {% endfor %}
           </select>
