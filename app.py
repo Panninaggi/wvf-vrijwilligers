@@ -1285,7 +1285,7 @@ def import_eml_opslaan():
         return redirect(url_for('import_eml_form'))
 
     is_jeugd = request.form.get('is_jeugd') == '1'
-    geselecteerde_profielen = [] if is_jeugd else request.form.getlist('profielen')
+    geselecteerde_profielen = request.form.getlist('profielen')
 
     # Bij jeugdlid: e-mail en telefoon zijn van de ouder
     email        = request.form.get('email', '').strip()
@@ -1348,7 +1348,7 @@ def import_eml_opslaan():
     conn.close()
 
     if is_jeugd:
-        flash(f'{naam} opgeslagen als jeugdlid — geen intake-taken aangemaakt.', 'info')
+        flash(f'{naam} opgeslagen als jeugdlid — intake-taken aangemaakt voor oudercontact.', 'info')
     else:
         flash(f'{naam} geïmporteerd en taken aangemaakt.', 'success')
     return redirect(url_for('vrijwilliger_detail', vid=vw_id))

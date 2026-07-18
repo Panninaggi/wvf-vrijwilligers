@@ -226,6 +226,31 @@
         </div>
       </div>
 
+      <div class="section-head">Profielen & intake-taken</div>
+      <p style="font-size:.8rem;color:#64748b;margin:-.5rem 0 .75rem;line-height:1.5">
+        De geselecteerde profielen krijgen een intake-taak, zodat de profieleigenaar
+        contact kan opnemen met de ouder/verzorger.
+      </p>
+      {% if data.geselecteerde_profielen %}
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:.65rem 1rem;margin-bottom:.85rem;font-size:.85rem;color:#166534">
+        Herkend via Sportlink: <strong>{{ data.geselecteerde_profielen | join(', ') }}</strong>
+      </div>
+      {% endif %}
+      <div class="checkbox-clusters">
+        {% for cluster_naam, namen in profielen_clusters %}
+        <div class="cb-cluster">
+          <div class="cb-cluster-title">{{ cluster_naam }}</div>
+          {% for naam in namen %}
+          <label class="cb-item">
+            <input type="checkbox" name="profielen" value="{{ naam }}"
+                   {{ 'checked' if naam in data.geselecteerde_profielen }}>
+            {{ naam }}
+          </label>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+
       <div class="section-head">Opmerkingen</div>
       <div class="frow">
         <div class="field">
@@ -236,7 +261,7 @@
       <div class="form-actions">
         <a href="/import/eml" class="btn-cancel">Annuleren</a>
         <button type="submit" class="btn-primary" style="flex:2">
-          Opslaan als jeugdlid →
+          Opslaan als jeugdlid + taken aanmaken →
         </button>
       </div>
     </form>
