@@ -1152,8 +1152,12 @@ def parse_sportlink_eml(eml_bytes):
     if not body:
         return None, 'Geen leesbare tekst gevonden in het EML-bestand.'
 
-    if 'Sportlink' not in body and 'NIEUWE AANMELDING' not in body.upper():
-        return None, 'Dit lijkt geen Sportlink-aanmeldingsmail te zijn.'
+    # Start parsing vanaf het herkenbare kopje
+    marker = 'NIEUWE AANMELDING BIJ WVF'
+    marker_pos = body.upper().find(marker)
+    if marker_pos == -1:
+        return None, 'Koptekst "NIEUWE AANMELDING BIJ WVF" niet gevonden. Is dit een Sportlink-aanmeldingsmail?'
+    body = body[marker_pos:]
 
     # Basisvelden
     voornaam     = _get_field(body, 'Voornaam')
