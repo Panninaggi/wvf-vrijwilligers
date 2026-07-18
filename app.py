@@ -789,7 +789,8 @@ def index():
     '''
 
     tab = request.args.get('tab', 'alle')
-    basis_filter = "(v.gearchiveerd IS NULL OR v.gearchiveerd = 0)"
+    # Jeugdleden worden nooit getoond in het vrijwilligersoverzicht
+    basis_filter = "(v.gearchiveerd IS NULL OR v.gearchiveerd = 0) AND (v.status_vrijwilliger IS NULL OR v.status_vrijwilliger != 'Jeugdlid')"
 
     # Tellers per status voor de tabs
     tellers = {}
@@ -1348,7 +1349,7 @@ def import_eml_opslaan():
     conn.close()
 
     if is_jeugd:
-        flash(f'{naam} opgeslagen als jeugdlid — intake-taken aangemaakt voor oudercontact.', 'info')
+        flash(f'Intake-taak aangemaakt voor {naam} — de profieleigenaar kan contact opnemen met de ouder/verzorger.', 'info')
     else:
         flash(f'{naam} geïmporteerd en taken aangemaakt.', 'success')
     return redirect(url_for('vrijwilliger_detail', vid=vw_id))
