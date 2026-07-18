@@ -1126,6 +1126,23 @@ def _get_field_na_sectie(text, sectie, label):
     return ''
 
 
+def _html_naar_tekst(html):
+    """Eenvoudige HTML → platte tekst converter."""
+    import re
+    tekst = re.sub(r'<br\s*/?>', '\n', html, flags=re.IGNORECASE)
+    tekst = re.sub(r'<p[^>]*>', '\n', tekst, flags=re.IGNORECASE)
+    tekst = re.sub(r'</p>', '\n', tekst, flags=re.IGNORECASE)
+    tekst = re.sub(r'<tr[^>]*>', '\n', tekst, flags=re.IGNORECASE)
+    tekst = re.sub(r'<td[^>]*>', '\t', tekst, flags=re.IGNORECASE)
+    tekst = re.sub(r'<[^>]+>', '', tekst)
+    tekst = re.sub(r'&nbsp;', ' ', tekst)
+    tekst = re.sub(r'&amp;', '&', tekst)
+    tekst = re.sub(r'&#\d+;', '', tekst)
+    tekst = re.sub(r'\t+', '\n', tekst)
+    tekst = re.sub(r' {2,}', ' ', tekst)
+    return tekst.strip()
+
+
 def parse_sportlink_eml(eml_bytes):
     """Parse Sportlink aanmeldingsmail. Geeft (data_dict, fout_str)."""
     import email as _email
@@ -1133,21 +1150,41 @@ def parse_sportlink_eml(eml_bytes):
     import re
     from datetime import date as _date
 
+    # Probeer met moderne policy, val terug op compat32
     try:
         msg = _email.message_from_bytes(eml_bytes, policy=_policy.default)
-    except Exception as e:
-        return None, f'Kan EML niet lezen: {e}'
+    except Exception:
+        try:
+            msg = _email.message_from_bytes(eml_bytes)
+        except Exception as e:
+            return None, f'Kan EML niet lezen: {e}'
 
-    # Tekstbody ophalen
+    # Tekstbody ophalen — tekst heeft voorkeur, HTML als fallback
     body = ''
+    html_body = ''
     for part in msg.walk():
         ct = part.get_content_type()
-        if ct == 'text/plain':
+        try:
+            # Probeer charset uit de mail zelf te gebruiken
+            charset = part.get_content_charset() or 'utf-8'
+            raw = part.get_payload(decode=True)
+            if raw is None:
+                continue
+            tekst = raw.decode(charset, errors='replace')
+        except Exception:
             try:
-                body = part.get_content()
-                break
+                tekst = part.get_content()
             except Exception:
-                pass
+                continue
+
+        if ct == 'text/plain' and not body:
+            body = tekst
+        elif ct == 'text/html' and not html_body:
+            html_body = tekst
+
+    # Als geen plain text, converteer HTML
+    if not body and html_body:
+        body = _html_naar_tekst(html_body)
 
     if not body:
         return None, 'Geen leesbare tekst gevonden in het EML-bestand.'
@@ -1156,7 +1193,10 @@ def parse_sportlink_eml(eml_bytes):
     marker = 'NIEUWE AANMELDING BIJ WVF'
     marker_pos = body.upper().find(marker)
     if marker_pos == -1:
-        return None, 'Koptekst "NIEUWE AANMELDING BIJ WVF" niet gevonden. Is dit een Sportlink-aanmeldingsmail?'
+        # Probeer ook zonder 'BIJ WVF' (sommige clubs hebben andere naam)
+        marker_pos = body.upper().find('NIEUWE AANMELDING')
+    if marker_pos == -1:
+        return None, f'Koptekst "NIEUWE AANMELDING BIJ WVF" niet gevonden. Is dit een Sportlink-aanmeldingsmail?'
     body = body[marker_pos:]
 
     # Basisvelden
@@ -1253,6 +1293,34 @@ def parse_sportlink_eml(eml_bytes):
 @rol_vereist('beheerder')
 def import_eml_form():
     return render_template('import_eml.html')
+
+
+@app.route('/import/eml/diagnose', methods=['POST'])
+@login_required
+@rol_vereist('beheerder')
+def import_eml_diagnose():
+    """Toont ruwe inhoud van het EML-bestand voor probleemdiagnose."""
+    bestand = request.files.get('bestand')
+    if not bestand:
+        return 'Geen bestand', 400
+    inhoud = bestand.read()
+    import email as _em
+    from email import policy as _pol
+    try:
+        msg = _em.message_from_bytes(inhoud, policy=_pol.default)
+    except Exception:
+        msg = _em.message_from_bytes(inhoud)
+    delen = []
+    for part in msg.walk():
+        ct = part.get_content_type()
+        cs = part.get_content_charset() or '?'
+        try:
+            raw = part.get_payload(decode=True)
+            preview = raw[:500].decode(cs, errors='replace') if raw else '(leeg)'
+        except Exception as e:
+            preview = f'(fout: {e})'
+        delen.append(f'[{ct} / charset={cs}]\n{preview}\n')
+    return '<pre>' + '\n---\n'.join(delen) + '</pre>'
 
 
 @app.route('/import/eml', methods=['POST'])
