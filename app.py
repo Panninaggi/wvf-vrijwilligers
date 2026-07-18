@@ -2232,6 +2232,147 @@ _INTAKE_LABELS = {
 }
 
 
+_PROFIEL_ROLLEN = {
+    'Horeca': [
+        'Barmedewerker','Keukenmedewerker','Voorraadbeheer','Inkoper',
+        'Planner horeca','Horecacoördinator','Evenementencatering',
+        'Terrasmedewerker','Schoonmaker','Bestuurskamer medewerker','Theeschenker',
+    ],
+    'Accommodatie': [
+        'Schilderen','Timmeren','Lassen','Loodgieterswerk','Elektra/installatie',
+        'Metselwerk','Vloerleggen','Klussen algemeen','Tuinonderhoud','Schoonmaak',
+    ],
+    'Jeugd': [
+        'Coördinator','Trainer','Assistent-trainer','Leider','Coach',
+        'Spelbegeleider','Grensrechter','Scheidsrechter','Teammanager','Keeper-trainer',
+    ],
+    'Senioren': [
+        'Coördinator','Trainer','Assistent-trainer','Coach',
+        'Grensrechter','Scheidsrechter','Teammanager','Keeper-trainer',
+    ],
+    'Gastvrijheid & Ontvangst': [],
+    'Evenementen': [
+        'Organisator/coördinator','Opbouw & afbouw','Gastheer/gastvrouw',
+        'Bardienst','Keuken/catering','Kassa & verkoop','Techniek (geluid/licht)',
+        'Decoratie & styling','Communicatie & promotie','Vervoer & logistiek','EHBO',
+    ],
+    'Financiën': [
+        'Penningmeester','Assistent-penningmeester','Financieel administrateur',
+        'Contributiebeheer','Facturatie & betalingen','Begroting & rapportage',
+        'Kascontrolecommissie','Kantine financieel beheer',
+        'Sponsoring & fondsenwerving','Subsidieadministratie',
+    ],
+    'Voetbalontwikkeling': [
+        'Voorzitter technische commissie','Technisch coördinator selectie senioren',
+        'Technisch coördinator bovenbouw','Technisch coördinator middenbouw',
+        'Technisch coördinator onderbouw','Talentenbegeleider',
+        'Spelersanalist','Technisch adviseur',
+    ],
+    'Arbitrage': [
+        'Scheidsrechter JO9-JO10','Scheidsrechter JO11-JO12',
+        'Scheidsrechter JO13-JO14','Scheidsrechter JO15-JO16',
+        'Scheidsrechter JO17-JO19','Scheidsrechter senioren recreatief',
+        'Scheidsrechter senioren prestatief','Scheidsrechter toernooien',
+        'Grensrechter selectie O23-1','Grensrechter 1e elftal','Grensrechter 2e elftal',
+    ],
+    'Sponsoring & Netwerk': [
+        'Voorzitter sponsoring','Sponsorwerving','Relatiebeheer','Accountmanagement',
+        'Netwerken & acquisitie','Evenementsponsoring','Materialensponsoring',
+        'Communicatie & promotie sponsoren','Sponsorcontracten & administratie',
+        'Fondsenwerving & subsidies',
+    ],
+    'Communicatie & Media': [
+        'Beheerder X (Twitter)','Beheerder Instagram','Beheerder Facebook',
+        'Beheerder Website','Nieuwsbrief & e-mail','Contentcreatie',
+        'Fotografie','Videografie & livestream','Grafisch ontwerp',
+        'Perscontacten & PR','Notulist',
+    ],
+    'Administratie & IT ondersteuning': [
+        'Beheer Sportlink (ledenadministratie)','Beheer VoetbalAssist',
+        'Beheer vrijwilligersmodule','App-ontwikkeling',
+        'Website & online communicatie','IT-ondersteuning & helpdesk',
+        'Databeheer & rapportage','Systeembeheer','Secretariaat',
+    ],
+    'Zorg & Veiligheid': [
+        'Vertrouwenspersoon','EHBO','BHV (Bedrijfshulpverlening)',
+        'Veiligheidscoördinator','Preventiemedewerker',
+        'Grensoverschrijdend gedrag beleid','Jeugdveiligheid',
+        'Doping & integriteitsbeleid','Verzekeringen & claims',
+        'Incident- en conflictbeheer',
+    ],
+    'Bestuur': [
+        'Voorzitter','Vice-voorzitter','Secretaris','Penningmeester',
+        'Bestuurslid Voetbalontwikkeling','Bestuurslid Jeugd',
+        'Bestuurslid Senioren','Bestuurslid Facilitair',
+        'Bestuurslid Activiteiten & Vrijwilligers',
+    ],
+    'Activiteiten & Clubbinding': [],
+}
+
+
+@app.route('/export/profielen-rollen')
+@login_required
+@rol_vereist('beheerder')
+def export_profielen_rollen():
+    import openpyxl, io
+    from openpyxl.styles import Font, PatternFill, Alignment
+    from flask import send_file
+
+    conn = get_db()
+    profielen_db = [r['naam'] for r in
+                    conn.execute('SELECT naam FROM profielen ORDER BY naam').fetchall()]
+    conn.close()
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Profielen & Rollen'
+
+    hdr_fill = PatternFill('solid', fgColor='1A6CC4')
+    hdr_font = Font(bold=True, color='FFFFFF')
+
+    ws.column_dimensions['A'].width = 32
+    ws.column_dimensions['B'].width = 42
+
+    for ci, h in enumerate(['Profiel', 'Rol'], 1):
+        c = ws.cell(row=1, column=ci, value=h)
+        c.font = hdr_font
+        c.fill = hdr_fill
+        c.alignment = Alignment(horizontal='center')
+
+    rij = 2
+    profiel_fill_a = PatternFill('solid', fgColor='EFF6FF')
+    profiel_fill_b = PatternFill('solid', fgColor='FFFFFF')
+    wissel = True
+
+    for profiel in profielen_db:
+        rollen = _PROFIEL_ROLLEN.get(profiel, [])
+        achtergrond = profiel_fill_a if wissel else profiel_fill_b
+        wissel = not wissel
+
+        if rollen:
+            for rol in rollen:
+                ws.cell(row=rij, column=1, value=profiel).fill = achtergrond
+                ws.cell(row=rij, column=2, value=rol).fill = achtergrond
+                rij += 1
+        else:
+            ws.cell(row=rij, column=1, value=profiel).fill = achtergrond
+            c = ws.cell(row=rij, column=2, value='(geen specifieke rollen)')
+            c.fill = achtergrond
+            c.font = Font(italic=True, color='94A3B8')
+            rij += 1
+
+    ws.freeze_panes = 'A2'
+    ws.auto_filter.ref = f'A1:B{rij - 1}'
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return send_file(buf,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                     as_attachment=True,
+                     download_name='WVF_profielen_rollen.xlsx')
+
+
 @app.route('/export/profiel/<path:profiel_naam>')
 @login_required
 @rol_vereist('beheerder')
