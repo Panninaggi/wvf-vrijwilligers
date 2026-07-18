@@ -1047,6 +1047,297 @@ def import_form():
     return render_template('import.html')
 
 
+# ── EML import (Sportlink) ─────────────────────────────────────────────────────
+
+SPORTLINK_PROFIEL_MAP = {
+    'materiaal':          'Accommodatie',
+    'horeca':             'Horeca',
+    'kantine':            'Horeca',
+    'evenementen':        'Evenementen',
+    'financieel':         'Financiën',
+    'financiën':          'Financiën',
+    'communicatie':       'Communicatie & Media',
+    'jeugd':              'Jeugd',
+    'arbitrage':          'Arbitrage',
+    'sponsoring':         'Sponsoring & Netwerk',
+    'bestuur':            'Bestuur',
+    'zorg':               'Zorg & Veiligheid',
+    'veiligheid':         'Zorg & Veiligheid',
+    'activiteiten':       'Activiteiten & Clubbinding',
+    'senioren':           'Senioren',
+    'voetbalontwikkeling':'Voetbalontwikkeling',
+    'accommodatie':       'Accommodatie',
+    'it':                 'Administratie & IT ondersteuning',
+    'administratie':      'Administratie & IT ondersteuning',
+}
+
+_NL_MAANDEN = {
+    'jan':1,'feb':2,'mrt':3,'maa':3,'apr':4,'mei':5,
+    'jun':6,'jul':7,'aug':8,'sep':9,'okt':10,'nov':11,'dec':12,
+}
+
+
+def _parse_nl_datum(s):
+    """Zet Nederlandse datumnotaties om naar date-object."""
+    import re
+    from datetime import date as _date
+    if not s:
+        return None
+    s = s.strip()
+    # dd-mm-yyyy of dd/mm/yyyy
+    m = re.match(r'(\d{1,2})[-/](\d{1,2})[-/](\d{4})', s)
+    if m:
+        try:
+            return _date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
+        except ValueError:
+            pass
+    # dd-mmm-yyyy (bijv. 03-mei-2016)
+    m = re.match(r'(\d{1,2})-(\w+?)\.?-(\d{4})', s)
+    if m:
+        mn = _NL_MAANDEN.get(m.group(2).lower()[:3])
+        if mn:
+            try:
+                return _date(int(m.group(3)), mn, int(m.group(1)))
+            except ValueError:
+                pass
+    return None
+
+
+def _get_field(text, label):
+    """Haal waarde op die direct na label: staat (niet over lege regels heen)."""
+    import re
+    # Alleen horizontale whitespace na de dubbele punt, dan direct de waarde
+    m = re.search(rf'{re.escape(label)}:[ \t]*\n([^\n]+)', text)
+    if m:
+        waarde = m.group(1).strip()
+        # Waarde mag niet zelf een label zijn (eindigt op :)
+        if not waarde.endswith(':') and not re.match(r'.+:\s*$', waarde):
+            return waarde
+    return ''
+
+
+def _get_field_na_sectie(text, sectie, label):
+    """Haal waarde op binnen een sectie."""
+    import re
+    sec = re.search(rf'{re.escape(sectie)}\s*\n(.+?)(?:\n\n[A-Z]|\Z)', text, re.DOTALL)
+    if sec:
+        return _get_field(sec.group(1), label)
+    return ''
+
+
+def parse_sportlink_eml(eml_bytes):
+    """Parse Sportlink aanmeldingsmail. Geeft (data_dict, fout_str)."""
+    import email as _email
+    from email import policy as _policy
+    import re
+    from datetime import date as _date
+
+    try:
+        msg = _email.message_from_bytes(eml_bytes, policy=_policy.default)
+    except Exception as e:
+        return None, f'Kan EML niet lezen: {e}'
+
+    # Tekstbody ophalen
+    body = ''
+    for part in msg.walk():
+        ct = part.get_content_type()
+        if ct == 'text/plain':
+            try:
+                body = part.get_content()
+                break
+            except Exception:
+                pass
+
+    if not body:
+        return None, 'Geen leesbare tekst gevonden in het EML-bestand.'
+
+    if 'Sportlink' not in body and 'NIEUWE AANMELDING' not in body.upper():
+        return None, 'Dit lijkt geen Sportlink-aanmeldingsmail te zijn.'
+
+    # Basisvelden
+    voornaam     = _get_field(body, 'Voornaam')
+    tussenvoegsel = _get_field(body, 'Tussenvoegsel(s)').replace('-', '').strip()
+    achternaam   = _get_field(body, 'Achternaam')
+    geslacht     = _get_field(body, 'Geslacht')
+    geb_raw      = _get_field(body, 'Geboortedatum')
+    aanmelddatum = _get_field(body, 'Aanmelddatum')
+
+    # Adres (straat+nr op één regel, postcode+stad op volgende)
+    adres = postcode = woonplaats = ''
+    adres_m = re.search(r'Adres:\s*\n\s*([^\n]+)\n\s*([^\n]+)', body)
+    if adres_m:
+        adres = adres_m.group(1).strip()
+        pc_line = adres_m.group(2).strip()
+        pc_m = re.match(r'(\d{4}\s*[A-Z]{2})\s+(.*)', pc_line)
+        if pc_m:
+            postcode  = pc_m.group(1).strip()
+            woonplaats = pc_m.group(2).strip().title()
+
+    # Contact — pak eerste e-mail (lid), tweede is ouder
+    emails = re.findall(r'E-mail:\s*\n\s*([^\n@\s]+@[^\n\s]+)', body)
+    email_lid   = emails[0].strip() if len(emails) > 0 else ''
+    email_ouder = emails[1].strip() if len(emails) > 1 else ''
+
+    telefoons = re.findall(r'(?:Telefoon|Mobiel):\s*\n\s*([0-9+][^\n]+)', body)
+    telefoon = telefoons[0].strip() if telefoons else ''
+
+    # Ouder/verzorger
+    ouder_naam = _get_field_na_sectie(body, 'Ouder/verzorger', 'Naam')
+
+    # Leeftijd berekenen
+    geboortedatum_obj = _parse_nl_datum(geb_raw)
+    leeftijd = None
+    vrijwilliger_geschikt = False
+    if geboortedatum_obj:
+        today = _date.today()
+        leeftijd = today.year - geboortedatum_obj.year - (
+            (today.month, today.day) < (geboortedatum_obj.month, geboortedatum_obj.day)
+        )
+        vrijwilliger_geschikt = leeftijd >= 18
+
+    # Formatteer geboortedatum naar dd-mm-yyyy
+    geboortedatum_fmt = geboortedatum_obj.strftime('%d-%m-%Y') if geboortedatum_obj else geb_raw
+
+    # Vrijwilligerstaken → profielen
+    geselecteerde_profielen = []
+    taken_sectie = re.search(
+        r'Vrijwilligerstaken\s*\n(.+?)(?:\nFinanci[eë]le gegevens|\nOpmerkingen|\Z)',
+        body, re.DOTALL | re.IGNORECASE
+    )
+    if taken_sectie:
+        taken_text = taken_sectie.group(1)
+        for regel in taken_text.split('\n'):
+            m = re.match(r'([^:]+):\s*$', regel.strip())
+            if m:
+                taak_naam = m.group(1).strip()
+                # Kijk of volgende niet-lege regel 'Ja' is
+                idx = taken_text.find(regel.strip())
+                rest = taken_text[idx + len(regel.strip()):]
+                waarde_m = re.search(r'^\s*\n\s*([^\n]+)', rest)
+                if waarde_m and waarde_m.group(1).strip().lower() == 'ja':
+                    profiel = SPORTLINK_PROFIEL_MAP.get(taak_naam.lower())
+                    if profiel and profiel not in geselecteerde_profielen:
+                        geselecteerde_profielen.append(profiel)
+
+    naam_volledig = ' '.join(p for p in [voornaam, tussenvoegsel, achternaam] if p)
+
+    return {
+        'voornaam':              voornaam,
+        'tussenvoegsel':         tussenvoegsel,
+        'achternaam':            achternaam,
+        'naam':                  naam_volledig,
+        'geslacht':              geslacht,
+        'geboortedatum':         geboortedatum_fmt,
+        'geboortedatum_raw':     geb_raw,
+        'leeftijd':              leeftijd,
+        'vrijwilliger_geschikt': vrijwilliger_geschikt,
+        'adres':                 adres,
+        'postcode':              postcode,
+        'woonplaats':            woonplaats,
+        'telefoon':              telefoon,
+        'email':                 email_lid,
+        'ouder_naam':            ouder_naam,
+        'ouder_email':           email_ouder,
+        'aanmelddatum':          aanmelddatum,
+        'geselecteerde_profielen': geselecteerde_profielen,
+    }, None
+
+
+@app.route('/import/eml', methods=['GET'])
+@login_required
+@rol_vereist('beheerder')
+def import_eml_form():
+    return render_template('import_eml.html')
+
+
+@app.route('/import/eml', methods=['POST'])
+@login_required
+@rol_vereist('beheerder')
+def import_eml_verwerken():
+    bestand = request.files.get('bestand')
+    if not bestand or not bestand.filename.endswith('.eml'):
+        flash('Selecteer een .eml bestand.', 'error')
+        return redirect(url_for('import_eml_form'))
+
+    data, fout = parse_sportlink_eml(bestand.read())
+    if fout:
+        flash(f'Fout bij inlezen: {fout}', 'error')
+        return redirect(url_for('import_eml_form'))
+
+    conn = get_db()
+    profielen_rows = conn.execute('SELECT naam FROM profielen ORDER BY naam').fetchall()
+    conn.close()
+
+    return render_template('import_eml_preview.html', data=data,
+                           profielen_clusters=cluster_profielen(profielen_rows))
+
+
+@app.route('/import/eml/opslaan', methods=['POST'])
+@login_required
+@rol_vereist('beheerder')
+def import_eml_opslaan():
+    voornaam     = request.form.get('voornaam', '').strip()
+    tussenvoegsel = request.form.get('tussenvoegsel', '').strip()
+    achternaam   = request.form.get('achternaam', '').strip()
+    naam = ' '.join(p for p in [voornaam, tussenvoegsel, achternaam] if p)
+    if not naam:
+        flash('Naam ontbreekt.', 'error')
+        return redirect(url_for('import_eml_form'))
+
+    geselecteerde_profielen = request.form.getlist('profielen')
+
+    conn = get_db()
+    vw_id = conn.insert('''
+        INSERT INTO vrijwilligers
+        (naam, voornaam, tussenvoegsel, achternaam, adres, postcode, woonplaats,
+         geboortedatum, email, telefoonnummer, ouder_verzorger,
+         profielen, status_vrijwilliger)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+    ''', (naam, voornaam, tussenvoegsel, achternaam,
+          request.form.get('adres','').strip(),
+          request.form.get('postcode','').strip(),
+          request.form.get('woonplaats','').strip(),
+          request.form.get('geboortedatum','').strip(),
+          request.form.get('email','').strip(),
+          request.form.get('telefoon','').strip(),
+          request.form.get('ouder_naam','').strip() and 'Ja' or '',
+          '||'.join(geselecteerde_profielen),
+          'Nieuw'))
+
+    for profiel_naam in geselecteerde_profielen:
+        profiel_row = conn.execute(
+            'SELECT eigenaar_id FROM profielen WHERE naam=?', (profiel_naam,)
+        ).fetchone()
+        eigenaar_id = profiel_row['eigenaar_id'] if profiel_row else None
+        taak_id = conn.insert(
+            'INSERT INTO taken (vrijwilliger_id, eigenaar_id, profiel, type, status) VALUES (?,?,?,?,?)',
+            (vw_id, eigenaar_id, profiel_naam, 'intake', 'Nieuw')
+        )
+        if profiel_row:
+            p_full = conn.execute('''
+                SELECT e.email AS eigenaar_email,
+                       e.voornaam||' '||e.achternaam AS eigenaar_naam,
+                       p.tweede_eigenaar_actief, p.tweede_eigenaar_id,
+                       e2.email AS tweede_email,
+                       e2.voornaam||' '||e2.achternaam AS tweede_naam
+                FROM profielen p
+                LEFT JOIN eigenaren e  ON p.eigenaar_id        = e.id
+                LEFT JOIN eigenaren e2 ON p.tweede_eigenaar_id = e2.id
+                WHERE p.naam = ?
+            ''', (profiel_naam,)).fetchone()
+            if p_full and p_full['eigenaar_email']:
+                email_eigenaar_notificatie(p_full['eigenaar_email'], p_full['eigenaar_naam'],
+                                           naam, profiel_naam, taak_id)
+            if p_full and p_full['tweede_eigenaar_actief'] and p_full['tweede_email']:
+                email_eigenaar_notificatie(p_full['tweede_email'], p_full['tweede_naam'],
+                                           naam, profiel_naam, taak_id)
+
+    conn.commit()
+    conn.close()
+    flash(f'{naam} geïmporteerd en taken aangemaakt.', 'success')
+    return redirect(url_for('vrijwilliger_detail', vid=vw_id))
+
+
 @app.route('/import/template')
 @login_required
 @rol_vereist('beheerder')

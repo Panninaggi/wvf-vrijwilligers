@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% block title %}EML voorbeeldscherm — WVF{% endblock %}
+
+{% block head %}
+<style>
+  .preview-page { max-width:780px; margin:2rem auto; padding:0 1.25rem; }
+  .leeftijd-banner {
+    padding:1rem 1.25rem; border-radius:8px; margin-bottom:1.25rem;
+    display:flex; align-items:center; gap:.75rem; font-size:.9rem; font-weight:600;
+  }
+  .leeftijd-banner.ok    { background:#dcfce7; color:#166534; border:1px solid #bbf7d0; }
+  .leeftijd-banner.jong  { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
+  .section-head { font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#1A6CC4; margin:1.5rem 0 .9rem; padding-bottom:.4rem; border-bottom:2px solid #e2e8f0; }
+  .section-head:first-child { margin-top:0; }
+  .frow { display:grid; gap:.75rem 1.25rem; margin-bottom:.75rem; }
+  .frow.c2 { grid-template-columns:1fr 1fr; }
+  .frow.c3 { grid-template-columns:2fr 1fr 2fr; }
+  @media(max-width:580px) { .frow.c2,.frow.c3 { grid-template-columns:1fr; } }
+  .form-actions { display:flex; gap:1rem; margin-top:1.75rem; padding-top:1.25rem; border-top:1px solid #e2e8f0; }
+  .btn-cancel { flex:1; padding:.62rem; background:#f1f5f9; color:#475569; border:1.5px solid #e2e8f0; border-radius:6px; font-size:.92rem; font-weight:600; cursor:pointer; text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center; }
+  .cb-cluster-title { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#1A6CC4; margin-bottom:.55rem; padding-bottom:.35rem; border-bottom:1px solid #e2e8f0; }
+  .cb-item { display:flex; align-items:center; gap:.55rem; padding:.3rem .25rem; font-size:.88rem; cursor:pointer; border-radius:4px; }
+  .cb-item:hover { background:#f1f5f9; }
+  .cb-item input { accent-color:#1A6CC4; width:15px; height:15px; flex-shrink:0; }
+  .checkbox-clusters { display:grid; grid-template-columns:1fr 1fr; border:1.5px solid #cbd5e1; border-radius:6px; overflow:hidden; }
+  .cb-cluster { padding:.85rem 1rem; border-right:1px solid #e2e8f0; border-bottom:1px solid #e2e8f0; }
+  .cb-cluster:nth-child(2n) { border-right:none; }
+  .cb-cluster:nth-last-child(-n+2) { border-bottom:none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="preview-page">
+  <div class="breadcrumb">
+    <a href="/import/eml">EML importeren</a>
+    <span>›</span>
+    <span>Voorbeeldscherm</span>
+  </div>
+
+  <!-- Leeftijdsbanner -->
+  {% if data.leeftijd is not none %}
+  <div class="leeftijd-banner {{ 'ok' if data.vrijwilliger_geschikt else 'jong' }}">
+    {% if data.vrijwilliger_geschikt %}
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    {{ data.naam }} is {{ data.leeftijd }} jaar — geschikt voor vrijwilligerswerk.
+    {% else %}
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    {{ data.naam }} is {{ data.leeftijd }} jaar — <strong>te jong voor vrijwilligerswerk (minimum 18 jaar).</strong>
+    Dit lid wordt niet als vrijwilliger opgeslagen.
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if data.vrijwilliger_geschikt %}
+  <div class="card">
+    <form method="POST" action="/import/eml/opslaan">
+
+      <div class="section-head">Persoonsgegevens</div>
+      <div class="frow c3">
+        <div class="field">
+          <label>Voornaam <span style="color:#dc2626">*</span></label>
+          <input type="text" name="voornaam" required value="{{ data.voornaam }}" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Tussenvoegsel</label>
+          <input type="text" name="tussenvoegsel" value="{{ data.tussenvoegsel }}" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Achternaam <span style="color:#dc2626">*</span></label>
+          <input type="text" name="achternaam" required value="{{ data.achternaam }}" autocomplete="off">
+        </div>
+      </div>
+      <div class="frow">
+        <div class="field">
+          <label>Adres</label>
+          <input type="text" name="adres" value="{{ data.adres }}" autocomplete="off">
+        </div>
+      </div>
+      <div class="frow c2">
+        <div class="field">
+          <label>Postcode</label>
+          <input type="text" name="postcode" value="{{ data.postcode }}" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Woonplaats</label>
+          <input type="text" name="woonplaats" value="{{ data.woonplaats }}" autocomplete="off">
+        </div>
+      </div>
+      <div class="frow c2">
+        <div class="field">
+          <label>Geboortedatum</label>
+          <input type="text" name="geboortedatum" value="{{ data.geboortedatum }}" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="section-head">Contactgegevens</div>
+      <div class="frow c2">
+        <div class="field">
+          <label>E-mailadres</label>
+          <input type="email" name="email" value="{{ data.email }}" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Telefoonnummer</label>
+          <input type="tel" name="telefoon" value="{{ data.telefoon }}" autocomplete="off">
+        </div>
+      </div>
+
+      {% if data.ouder_naam %}
+      <div class="section-head">Ouder/verzorger</div>
+      <div class="frow c2">
+        <div class="field">
+          <label>Naam ouder/verzorger</label>
+          <input type="text" name="ouder_naam" value="{{ data.ouder_naam }}" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>E-mail ouder/verzorger</label>
+          <input type="email" name="ouder_email" value="{{ data.ouder_email }}" autocomplete="off">
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="section-head">Profielen</div>
+      {% if data.geselecteerde_profielen %}
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:.65rem 1rem;margin-bottom:.85rem;font-size:.85rem;color:#166534">
+        Sportlink-taken herkend: <strong>{{ data.geselecteerde_profielen | join(', ') }}</strong>
+      </div>
+      {% else %}
+      <div style="background:#fef9c3;border:1px solid #fde68a;border-radius:6px;padding:.65rem 1rem;margin-bottom:.85rem;font-size:.85rem;color:#854d0e">
+        Geen vrijwilligerstaken herkend — selecteer handmatig een of meer profielen.
+      </div>
+      {% endif %}
+
+      <div class="checkbox-clusters">
+        {% for cluster_naam, namen in profielen_clusters %}
+        <div class="cb-cluster">
+          <div class="cb-cluster-title">{{ cluster_naam }}</div>
+          {% for naam in namen %}
+          <label class="cb-item">
+            <input type="checkbox" name="profielen" value="{{ naam }}"
+                   {{ 'checked' if naam in data.geselecteerde_profielen }}>
+            {{ naam }}
+          </label>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="form-actions">
+        <a href="/import/eml" class="btn-cancel">Annuleren</a>
+        <button type="submit" class="btn-primary" style="flex:2">
+          Importeren & taken aanmaken →
+        </button>
+      </div>
+    </form>
+  </div>
+
+  {% else %}
+  <!-- Jeugdlid: niet als vrijwilliger opslaan -->
+  <div class="card">
+    <div class="card-title">Geïmporteerde gegevens (ter info)</div>
+    <table style="width:100%;font-size:.88rem;border-collapse:collapse">
+      {% for lbl, val in [
+        ('Naam', data.naam), ('Geboortedatum', data.geboortedatum),
+        ('Leeftijd', data.leeftijd ~ ' jaar'),
+        ('Adres', data.adres), ('Postcode', data.postcode),
+        ('Woonplaats', data.woonplaats), ('E-mail', data.email),
+        ('Telefoon', data.telefoon), ('Ouder/verzorger', data.ouder_naam),
+      ] %}
+      {% if val %}
+      <tr style="border-bottom:1px solid #f1f5f9">
+        <td style="padding:.4rem .75rem .4rem 0;color:#64748b;width:160px">{{ lbl }}</td>
+        <td style="padding:.4rem 0;font-weight:500">{{ val }}</td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+    </table>
+    <div style="margin-top:1.25rem;display:flex;gap:.75rem">
+      <a href="/import/eml" class="btn-cancel" style="text-decoration:none">← Nieuw bestand</a>
+      <a href="/" class="btn-primary" style="flex:1;text-align:center;text-decoration:none">Terug naar overzicht</a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
